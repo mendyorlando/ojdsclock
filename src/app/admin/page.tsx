@@ -163,8 +163,8 @@ export default async function AdminPage({
             <div className="glass-card rounded-[1.5rem] p-5">
               <h2 className="font-extrabold text-ink text-sm mb-1">Long-shift reminders</h2>
               <p className="text-xs font-semibold text-ink-soft mb-3">
-                Runs automatically every few minutes. This button is here so you can see it work
-                without waiting.
+                Runs automatically once a day (past 5:00 PM Eastern). This button is here so you
+                can trigger it on demand instead of waiting.
               </p>
               <a
                 href="/api/cron/long-shift-check"
