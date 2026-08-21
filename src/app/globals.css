@@ -1,26 +1,237 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-teal-950: #041d1a;
+  --color-teal-900: #0b3b38;
+  --color-teal-800: #0e4d48;
+  --color-teal-700: #0e6f68;
+  --color-teal-600: #128b81;
+  --color-teal-500: #17ab9d;
+  --color-teal-300: #7fd8cc;
+  --color-teal-100: #dff5f1;
+
+  --color-orange-700: #d95f1c;
+  --color-orange-600: #ff7a33;
+  --color-orange-500: #ff8f4d;
+  --color-orange-400: #ffab6e;
+  --color-orange-300: #ffc48c;
+  --color-orange-100: #ffe7d1;
+
+  --color-ink: #10201e;
+  --color-ink-soft: #55716c;
+  --color-ink-faint: #8aa09c;
+
+  --color-good: #1f9d5c;
+  --color-good-bg: #dcf5e6;
+  --color-warn: #b5790f;
+  --color-warn-bg: #fbecc9;
+  --color-crit: #d1402a;
+  --color-crit-bg: #fbdfd8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-teal-950: var(--color-teal-950);
+  --color-teal-900: var(--color-teal-900);
+  --color-teal-800: var(--color-teal-800);
+  --color-teal-700: var(--color-teal-700);
+  --color-teal-600: var(--color-teal-600);
+  --color-teal-500: var(--color-teal-500);
+  --color-teal-300: var(--color-teal-300);
+  --color-teal-100: var(--color-teal-100);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-orange-700: var(--color-orange-700);
+  --color-orange-600: var(--color-orange-600);
+  --color-orange-500: var(--color-orange-500);
+  --color-orange-400: var(--color-orange-400);
+  --color-orange-300: var(--color-orange-300);
+  --color-orange-100: var(--color-orange-100);
+
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-faint: var(--color-ink-faint);
+
+  --color-good: var(--color-good);
+  --color-good-bg: var(--color-good-bg);
+  --color-warn: var(--color-warn);
+  --color-warn-bg: var(--color-warn-bg);
+  --color-crit: var(--color-crit);
+  --color-crit-bg: var(--color-crit-bg);
+
+  --font-sans: var(--font-jakarta);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-ink);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+}
+
+/* ---------- full page backdrops ---------- */
+
+.stage-dark {
+  position: relative;
+  min-height: 100dvh;
+  background: radial-gradient(120% 90% at 50% -10%, #103d38 0%, #062421 45%, #041614 100%);
+  overflow: hidden;
+}
+
+.stage-dark::before,
+.stage-dark::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.stage-dark::before {
+  width: 60vw;
+  height: 60vw;
+  max-width: 640px;
+  max-height: 640px;
+  background: radial-gradient(circle, var(--color-teal-500) 0%, transparent 70%);
+  opacity: 0.35;
+  top: -18vw;
+  left: -14vw;
+}
+
+.stage-dark::after {
+  width: 55vw;
+  height: 55vw;
+  max-width: 560px;
+  max-height: 560px;
+  background: radial-gradient(circle, var(--color-orange-600) 0%, transparent 70%);
+  opacity: 0.3;
+  bottom: -16vw;
+  right: -12vw;
+}
+
+.stage-light {
+  position: relative;
+  min-height: 100dvh;
+  background:
+    radial-gradient(90% 60% at 15% 0%, rgba(23, 171, 157, 0.14) 0%, transparent 60%),
+    radial-gradient(80% 55% at 100% 10%, rgba(255, 122, 51, 0.12) 0%, transparent 60%),
+    #f6f8f7;
+}
+
+/* ---------- glass cards ---------- */
+
+.glass-dark {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 30px 60px -20px rgba(0, 0, 0, 0.65),
+    0 10px 30px -12px rgba(23, 171, 157, 0.25);
+}
+
+.glass-card {
+  background: linear-gradient(160deg, #ffffff 0%, #fbfdfc 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 1px rgba(16, 32, 30, 0.03),
+    0 24px 48px -24px rgba(11, 59, 56, 0.28),
+    0 8px 20px -10px rgba(255, 122, 51, 0.12);
+}
+
+.glow-teal {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 20px 40px -20px rgba(11, 59, 56, 0.3),
+    0 0 0 1px rgba(23, 171, 157, 0.06);
+}
+
+/* ---------- buttons ---------- */
+
+.btn-gradient {
+  background: linear-gradient(155deg, var(--color-orange-500), var(--color-orange-700));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 14px 28px -10px rgba(217, 95, 28, 0.55),
+    0 4px 10px -4px rgba(217, 95, 28, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 20px 36px -12px rgba(217, 95, 28, 0.6),
+    0 6px 14px -4px rgba(217, 95, 28, 0.45);
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
+
+.btn-teal-gradient {
+  background: linear-gradient(155deg, var(--color-teal-500), var(--color-teal-900));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 14px 28px -10px rgba(11, 59, 56, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-teal-gradient:hover {
+  transform: translateY(-2px);
+}
+
+/* ---------- 3d tilt ---------- */
+
+.tilt {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  transform-style: preserve-3d;
+}
+
+.tilt:hover {
+  transform: perspective(900px) rotateX(2.5deg) rotateY(-2.5deg) translateY(-4px);
+}
+
+/* ---------- form fields ---------- */
+
+.field {
+  background: #ffffff;
+  box-shadow:
+    inset 0 2px 4px rgba(16, 32, 30, 0.06),
+    inset 0 0 0 1px rgba(16, 32, 30, 0.04);
+  transition: box-shadow 0.15s ease;
+}
+
+.field:focus {
+  outline: none;
+  box-shadow:
+    inset 0 2px 4px rgba(16, 32, 30, 0.05),
+    0 0 0 3px rgba(23, 171, 157, 0.25);
+}
+
+.field-dark {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fdfefe;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.15s ease;
+}
+
+.field-dark::placeholder {
+  color: rgba(223, 245, 241, 0.4);
+}
+
+.field-dark:focus {
+  outline: none;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(255, 143, 77, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tilt,
+  .btn-gradient,
+  .btn-teal-gradient {
+    transition: none;
+  }
+  .tilt:hover {
+    transform: none;
+  }
 }

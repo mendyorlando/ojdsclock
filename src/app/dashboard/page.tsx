@@ -1,0 +1,143 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { computeWeekDays, computeStreak, computeYearStats } from "@/lib/hours";
+import { tagLabel } from "@/lib/tags";
+import { Nav } from "@/components/Nav";
+import { FlameIcon } from "@/components/icons";
+import { NotificationOptIn } from "@/components/NotificationOptIn";
+
+function formatTime(d: Date | null) {
+  if (!d) return null;
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/dashboard");
+  if (user.role === "ADMIN") redirect("/admin");
+
+  const now = new Date();
+  const [days, streak, year] = await Promise.all([
+    computeWeekDays(user.id, now),
+    computeStreak(user.id, now),
+    computeYearStats(user.id, now),
+  ]);
+
+  const currentlyIn = days.some((d) => d.inProgress);
+
+  return (
+    <div className="stage-light flex-1 flex flex-col">
+      <Nav name={user.name} title={user.title} isAdmin={false} active="dashboard" />
+
+      <main className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-8 flex-1">
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-extrabold text-ink tracking-tight">
+              {user.name.split(" ")[0]}&apos;s hours
+            </h1>
+            <p className="text-ink-soft text-sm mt-1">{user.title || "Staff"}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-full text-xs font-extrabold px-3.5 py-1.5 ${
+                currentlyIn ? "bg-good-bg text-good" : "bg-teal-100/60 text-ink-soft"
+              }`}
+            >
+              {currentlyIn ? "Currently clocked in" : "Not clocked in right now"}
+            </span>
+            <Link
+              href="/dashboard/request"
+              className="rounded-full text-xs font-extrabold px-3.5 py-1.5 bg-orange-100 text-orange-700"
+            >
+              Request a correction
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-5">
+            <div
+              className="tilt rounded-[1.75rem] p-6 text-white relative overflow-hidden"
+              style={{
+                background: "linear-gradient(155deg, var(--color-teal-500), var(--color-teal-900))",
+                boxShadow:
+                  "inset 0 1px 0 rgba(255,255,255,.2), 0 30px 50px -20px rgba(11,59,56,.5), 0 10px 24px -10px rgba(255,122,51,.18)",
+              }}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wider opacity-70">This month</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-4xl font-extrabold">{year.hoursThisMonth}</span>
+                <span className="text-lg font-bold opacity-70">hours</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mt-5">
+                <div>
+                  <p className="text-xl font-extrabold">{year.hoursThisWeek}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider opacity-70 mt-0.5">This week</p>
+                </div>
+                <div>
+                  <p className="text-xl font-extrabold">{year.hoursThisYear}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider opacity-70 mt-0.5">This year</p>
+                </div>
+                <div>
+                  <p className="text-xl font-extrabold">{year.daysThisYear}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider opacity-70 mt-0.5">Days this year</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card tilt rounded-2xl p-4 flex items-center gap-3">
+              <FlameIcon className="h-6 w-6 text-orange-600 shrink-0" />
+              <div>
+                <p className="text-lg font-extrabold text-ink leading-tight">{streak}-day streak</p>
+                <p className="text-xs font-bold text-ink-soft">consecutive school days clocked in</p>
+              </div>
+            </div>
+
+            <NotificationOptIn />
+          </div>
+
+          <div className="glass-card rounded-[1.75rem] p-5">
+            <p className="text-sm font-extrabold text-ink mb-3">This week</p>
+            <div className="space-y-2">
+              {days.map((day) => (
+                <div
+                  key={day.label}
+                  className={`rounded-xl px-3 py-2.5 ${day.isToday ? "bg-orange-100/60" : "bg-white"}`}
+                  style={{ boxShadow: "0 6px 14px -10px rgba(11,59,56,.2)" }}
+                >
+                  <div className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-3">
+                    <span
+                      className={`text-xs font-extrabold text-center ${
+                        day.isToday ? "text-orange-700" : "text-ink-soft"
+                      }`}
+                    >
+                      {day.label}
+                    </span>
+                    <span className="text-xs font-bold text-ink-soft">
+                      {day.isFuture
+                        ? "Not yet"
+                        : day.sessions.length > 0
+                          ? day.sessions
+                              .map(
+                                (s) =>
+                                  `${tagLabel(s.tagId)}: ${formatTime(s.start)} to ${
+                                    s.end ? formatTime(s.end) : "now"
+                                  }`,
+                              )
+                              .join(", ")
+                          : "Not yet"}
+                    </span>
+                    <span className="text-sm font-extrabold text-ink text-right">
+                      {day.hours > 0 ? `${day.hours}h` : "-"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
