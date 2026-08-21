@@ -36,19 +36,21 @@ enum RequestStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  name         String
-  role         Role     @default(TEACHER)
-  title        String?
-  payType      PayType  @default(HOURLY)
-  createdAt    DateTime @default(now())
+  id            String   @id @default(cuid())
+  username      String   @unique
+  passwordHash  String
+  name          String
+  role          Role     @default(TEACHER)
+  title         String?
+  payType       PayType  @default(HOURLY)
+  boundDeviceId String?
+  createdAt     DateTime @default(now())
 
   clockEvents        ClockEvent[]
   sessions           Session[]
   pushSubscriptions  PushSubscription[]
   correctionRequests CorrectionRequest[]
+  deviceRequests     DeviceRequest[]
 }
 
 model ClockEvent {
@@ -91,6 +93,19 @@ model CorrectionRequest {
   status         RequestStatus @default(PENDING)
   createdAt      DateTime      @default(now())
   resolvedAt     DateTime?
+
+  @@index([userId, status])
+}
+
+model DeviceRequest {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId    String
+  deviceLabel String?
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  resolvedAt  DateTime?
 
   @@index([userId, status])
 }

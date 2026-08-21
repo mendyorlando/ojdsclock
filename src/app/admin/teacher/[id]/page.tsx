@@ -7,6 +7,7 @@ import { Nav } from "@/components/Nav";
 import { FlameIcon } from "@/components/icons";
 import { updateTeacherInfo, addHoursAction, generateDemoDataAction } from "./actions";
 import { approveRequest, denyRequest } from "@/app/admin/requests/actions";
+import { unbindDevice } from "@/app/admin/devices/actions";
 
 function toInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -253,6 +254,26 @@ export default async function TeacherDetailPage({
                   Add hours
                 </button>
               </form>
+            </div>
+
+            <div className="glass-card rounded-[1.5rem] p-5">
+              <h2 className="font-extrabold text-ink text-sm mb-1">Device lock</h2>
+              <p className="text-xs font-semibold text-ink-soft mb-3">
+                {teacher.boundDeviceId
+                  ? "Locked to the phone this account first signed in on. Signing in from any other phone gets flagged on the Devices page instead of letting them in."
+                  : "Not bound yet. The next phone this account signs in from becomes its locked device."}
+              </p>
+              {teacher.boundDeviceId && (
+                <form action={unbindDevice}>
+                  <input type="hidden" name="userId" value={teacher.id} />
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl py-2.5 text-sm font-bold text-crit bg-crit-bg cursor-pointer"
+                  >
+                    Unbind device
+                  </button>
+                </form>
+              )}
             </div>
 
             {teacher.username === "test" && (

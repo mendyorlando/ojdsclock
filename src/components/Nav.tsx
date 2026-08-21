@@ -12,7 +12,7 @@ export async function Nav({
   name: string;
   title?: string | null;
   isAdmin: boolean;
-  active: "dashboard" | "admin" | "reports" | "requests";
+  active: "dashboard" | "admin" | "reports" | "requests" | "devices";
 }) {
   const initials = name
     .split(" ")
@@ -21,9 +21,12 @@ export async function Nav({
     .slice(0, 2)
     .toUpperCase();
 
-  const pendingCount = isAdmin
-    ? await prisma.correctionRequest.count({ where: { status: "PENDING" } })
-    : 0;
+  const [pendingCount, pendingDeviceCount] = isAdmin
+    ? await Promise.all([
+        prisma.correctionRequest.count({ where: { status: "PENDING" } }),
+        prisma.deviceRequest.count({ where: { status: "PENDING" } }),
+      ])
+    : [0, 0];
 
   // The admin account isn't an employee, so it never sees a personal hours
   // page, only teachers do. Nobody sees both.
@@ -32,6 +35,7 @@ export async function Nav({
         { href: "/admin", label: "Admin", key: "admin" as const },
         { href: "/admin/reports", label: "Reports", key: "reports" as const },
         { href: "/admin/requests", label: "Requests", key: "requests" as const, badge: pendingCount },
+        { href: "/admin/devices", label: "Devices", key: "devices" as const, badge: pendingDeviceCount },
       ]
     : [{ href: "/dashboard", label: "My Hours", key: "dashboard" as const }];
 
@@ -90,7 +94,7 @@ export async function Nav({
               aria-label="Menu"
             >
               <MenuIcon className="h-5 w-5" />
-              {pendingCount > 0 && (
+              {pendingCount + pendingDeviceCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-orange-600" />
               )}
             </label>

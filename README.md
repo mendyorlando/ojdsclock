@@ -55,6 +55,34 @@ The coordinates in `.env` were decoded from the school's Plus Code
 -81.4825625`. That's a precise pin, not an estimate, so the 200m radius
 should hold up in practice.
 
+GPS only checks where the phone is, not who's holding it, so it doesn't
+stop someone from signing out of their own account and into a coworker's on
+the same phone to tap for them. Device binding (below) closes that specific
+gap instead.
+
+## Device binding, so an account can't be signed into on a coworker's phone
+
+Every teacher account (not admin, see "One admin, and admin is not an
+employee") locks itself to the first phone it successfully signs in on. A
+random id is generated in `localStorage` on that phone (`src/app/login/LoginForm.tsx`)
+and stored on the `User` row as `boundDeviceId` the moment that account
+first logs in anywhere.
+
+After that, a sign-in attempt for that account from a different phone
+doesn't succeed and doesn't create a session. Instead it creates a
+`DeviceRequest` and shows up on `/admin/devices` for an admin to approve or
+deny, with the phone's browser/OS and when it happened. Approving it moves
+`boundDeviceId` to the new device (any other pending requests for that
+teacher are auto-denied, since only one device can be bound at a time), so
+this also covers a teacher getting a new phone. Denying it leaves the
+lock as-is. An admin can also manually clear a teacher's lock from their
+detail page (`/admin/teacher/[id]`) without waiting for a request.
+
+This is a login-time check, not a per-tap check: a session that's already
+signed in keeps working normally (sessions last effectively forever, see
+"Getting started locally"), so unbinding a device only takes effect the
+next time that account signs out and back in.
+
 ## Two entrances, tracked separately
 
 Tag IDs are just whatever text you put in the URL, so two doors is two
