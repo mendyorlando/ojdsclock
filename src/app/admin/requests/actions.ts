@@ -16,30 +16,34 @@ export async function approveRequest(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("requestId") || "");
 
-  const request = await prisma.correctionRequest.findUnique({ where: { id } });
-  if (request && request.status === "PENDING") {
-    await applyHourEntry(request.userId, request.requestedStart, request.requestedEnd, "manual-entry");
-    await prisma.correctionRequest.update({
-      where: { id },
-      data: { status: "APPROVED", resolvedAt: new Date() },
-    });
+  // Atomic: only the caller that actually flips PENDING -> APPROVED goes on
+  // to apply the hours, so a double-click or a concurrent deny can't both
+  // "win" against the same request.
+  const claimed = await prisma.correctionRequest.updateMany({
+    where: { id, status: "PENDING" },
+    data: { status: "APPROVED", resolvedAt: new Date() },
+  });
+
+  if (claimed.count > 0) {
+    const request = await prisma.correctionRequest.findUnique({ where: { id } });
+    if (request) {
+      await applyHourEntry(request.userId, request.requestedStart, request.requestedEnd, "manual-entry");
+      revalidatePath(`/admin/teacher/${request.userId}`);
+    }
   }
 
   revalidatePath("/admin/requests");
-  revalidatePath(`/admin/teacher/${request?.userId}`);
 }
 
 export async function denyRequest(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("requestId") || "");
 
-  const request = await prisma.correctionRequest.findUnique({ where: { id } });
-  if (request && request.status === "PENDING") {
-    await prisma.correctionRequest.update({
-      where: { id },
-      data: { status: "DENIED", resolvedAt: new Date() },
-    });
-  }
+  const request = await prisma.correctionRequest.findFirst({ where: { id, status: "PENDING" } });
+  await prisma.correctionRequest.updateMany({
+    where: { id, status: "PENDING" },
+    data: { status: "DENIED", resolvedAt: new Date() },
+  });
 
   revalidatePath("/admin/requests");
   if (request) revalidatePath(`/admin/teacher/${request.userId}`);

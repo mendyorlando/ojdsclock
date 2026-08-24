@@ -33,9 +33,23 @@ export async function loginAction(formData: FormData) {
   // sign in from, so someone can't log out and log into a coworker's
   // account on their own phone to tap for them.
   if (user.role === "TEACHER") {
-    if (!user.boundDeviceId) {
-      await prisma.user.update({ where: { id: user.id }, data: { boundDeviceId: deviceId } });
-    } else if (user.boundDeviceId !== deviceId) {
+    let boundDeviceId = user.boundDeviceId;
+
+    if (!boundDeviceId) {
+      // Atomic: only the login that actually flips null -> deviceId wins
+      // the first-ever binding, so two logins landing at nearly the same
+      // instant from different devices can't both slip through.
+      const claimed = await prisma.user.updateMany({
+        where: { id: user.id, boundDeviceId: null },
+        data: { boundDeviceId: deviceId },
+      });
+      boundDeviceId =
+        claimed.count > 0
+          ? deviceId
+          : ((await prisma.user.findUnique({ where: { id: user.id } }))?.boundDeviceId ?? null);
+    }
+
+    if (boundDeviceId !== deviceId) {
       const alreadyPending = await prisma.deviceRequest.findFirst({
         where: { userId: user.id, deviceId, status: "PENDING" },
       });

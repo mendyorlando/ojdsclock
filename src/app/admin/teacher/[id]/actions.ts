@@ -13,6 +13,16 @@ async function requireAdmin() {
   return user;
 }
 
+// Server actions are directly-invokable endpoints, not gated by the page's
+// own notFound() check, so every action that mutates a specific teacher
+// must independently confirm the target really is a teacher, not just
+// that the caller is an admin.
+async function requireTargetTeacher(userId: string) {
+  if (!userId) return null;
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  return target && target.role === "TEACHER" ? target : null;
+}
+
 export async function updateTeacherInfo(formData: FormData) {
   await requireAdmin();
   const userId = String(formData.get("userId") || "");
@@ -21,7 +31,8 @@ export async function updateTeacherInfo(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const payType = String(formData.get("payType") || "HOURLY") === "PER_JOB" ? "PER_JOB" : "HOURLY";
 
-  if (userId && name && username) {
+  const target = await requireTargetTeacher(userId);
+  if (target && name && username) {
     const existing = await prisma.user.findUnique({ where: { username } });
     if (existing && existing.id !== userId) {
       redirect(`/admin/teacher/${userId}?error=${encodeURIComponent("That username is already taken.")}`);
@@ -46,7 +57,8 @@ export async function addHoursAction(formData: FormData) {
   const start = new Date(`${date}T${startTime}:00`);
   const end = new Date(`${date}T${endTime}:00`);
 
-  if (userId && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start) {
+  const target = await requireTargetTeacher(userId);
+  if (target && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start) {
     await applyHourEntry(userId, start, end, "manual-entry");
   }
 

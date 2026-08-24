@@ -16,7 +16,10 @@ export async function toggleClock(userId: string, tagId: string): Promise<Toggle
 
   const now = new Date();
 
-  if (last && now.getTime() - last.timestamp.getTime() < DUPLICATE_WINDOW_MS) {
+  // Only the same physical tag read twice in quick succession (a phone
+  // bouncing the NFC read) counts as an accidental duplicate; a genuine
+  // tap on a different door within the window is a real, distinct event.
+  if (last && last.tagId === tagId && now.getTime() - last.timestamp.getTime() < DUPLICATE_WINDOW_MS) {
     return { type: last.type, timestamp: last.timestamp, duplicate: true };
   }
 

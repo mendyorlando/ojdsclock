@@ -124,11 +124,17 @@ export async function applyHourEntry(
     orderBy: { timestamp: "asc" },
   });
 
-  const [existingDay] = pairEvents(dayEvents, end);
+  // Pair with the real current time, not the requested end, so a shift
+  // that's genuinely still open right now is recognized as such rather
+  // than treated as if it had already ended at the requested end time.
+  const [existingDay] = pairEvents(dayEvents, new Date());
   const existingHours = existingDay?.hours ?? 0;
   const requestedHours = (end.getTime() - start.getTime()) / 3_600_000;
 
-  if (requestedHours < existingHours) {
+  // Never let a correction silently close out and delete a shift that's
+  // genuinely still in progress; fall back to only adding the
+  // non-overlapping remainder instead, same as the "more hours" case.
+  if (requestedHours < existingHours && !existingDay?.inProgress) {
     await prisma.clockEvent.deleteMany({ where: { userId, timestamp: { gte: dayStart, lt: dayEnd } } });
     await prisma.clockEvent.create({ data: { userId, type: "IN", timestamp: start, tagId } });
     await prisma.clockEvent.create({ data: { userId, type: "OUT", timestamp: end, tagId } });
