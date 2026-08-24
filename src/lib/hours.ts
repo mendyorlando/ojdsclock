@@ -115,30 +115,46 @@ export async function computeWeekDays(userId: string, now: Date = new Date()): P
   });
 }
 
+async function closedDateSet(from: Date, to: Date): Promise<Set<string>> {
+  const closures = await prisma.schoolClosure.findMany({
+    where: { date: { gte: from, lt: to } },
+  });
+  return new Set(closures.map((c) => startOfDay(c.date).toDateString()));
+}
+
 export async function computeStreak(userId: string, now: Date = new Date()): Promise<number> {
   const lookback = new Date(now);
   lookback.setDate(lookback.getDate() - 70);
 
-  const events = await fetchEvents(userId, lookback, new Date(now.getTime() + 1));
+  const [events, closed] = await Promise.all([
+    fetchEvents(userId, lookback, new Date(now.getTime() + 1)),
+    closedDateSet(lookback, new Date(now.getTime() + 1)),
+  ]);
   const days = pairEvents(events, now);
-  const worked = new Map(days.map((d) => [d.dateKey, d.hours]));
+  // A day counts as worked once there's a session on it, even one that
+  // just started seconds ago and rounds to 0.0 hours so far, otherwise the
+  // very moment someone clocks in, "today" looks unworked and the streak
+  // undercounts by one right when it's shown on the tap-confirmation screen.
+  const worked = new Map(days.map((d) => [d.dateKey, d.hours > 0 || d.inProgress]));
 
   let streak = 0;
   const cursor = startOfDay(now);
 
-  if (!worked.has(cursor.toDateString())) {
+  if (!worked.get(cursor.toDateString())) {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  // Saturday and Sunday are both excluded; missing either never breaks the streak.
+  // Saturday and Sunday are both excluded, as is any date on the school's
+  // closure calendar (holidays, breaks); missing any of those never
+  // breaks the streak.
   for (let i = 0; i < 70; i++) {
     const dow = cursor.getDay();
-    if (dow === 0 || dow === 6) {
+    if (dow === 0 || dow === 6 || closed.has(cursor.toDateString())) {
       cursor.setDate(cursor.getDate() - 1);
       continue;
     }
-    const hrs = worked.get(cursor.toDateString()) ?? 0;
-    if (hrs > 0) {
+    const didWork = worked.get(cursor.toDateString()) ?? false;
+    if (didWork) {
       streak += 1;
       cursor.setDate(cursor.getDate() - 1);
     } else {
@@ -147,6 +163,14 @@ export async function computeStreak(userId: string, now: Date = new Date()): Pro
   }
 
   return streak;
+}
+
+const STREAK_MILESTONES = [7, 30, 100, 180, 365];
+
+export function streakMilestone(streak: number): number | null {
+  if (STREAK_MILESTONES.includes(streak)) return streak;
+  if (streak > 365 && streak % 365 === 0) return streak;
+  return null;
 }
 
 export type YearStats = {

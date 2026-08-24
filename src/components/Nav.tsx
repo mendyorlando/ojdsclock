@@ -12,7 +12,7 @@ export async function Nav({
   name: string;
   title?: string | null;
   isAdmin: boolean;
-  active: "dashboard" | "admin" | "reports" | "requests" | "devices";
+  active: "dashboard" | "admin" | "reports" | "requests" | "devices" | "calendar";
 }) {
   const initials = name
     .split(" ")
@@ -36,6 +36,7 @@ export async function Nav({
         { href: "/admin/reports", label: "Reports", key: "reports" as const },
         { href: "/admin/requests", label: "Requests", key: "requests" as const, badge: pendingCount },
         { href: "/admin/devices", label: "Devices", key: "devices" as const, badge: pendingDeviceCount },
+        { href: "/admin/calendar", label: "Calendar", key: "calendar" as const },
       ]
     : [{ href: "/dashboard", label: "My Hours", key: "dashboard" as const }];
 

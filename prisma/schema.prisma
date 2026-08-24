@@ -97,6 +97,13 @@ model CorrectionRequest {
   @@index([userId, status])
 }
 
+model SchoolClosure {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  label     String?
+  createdAt DateTime @default(now())
+}
+
 model DeviceRequest {
   id          String        @id @default(cuid())
   userId      String

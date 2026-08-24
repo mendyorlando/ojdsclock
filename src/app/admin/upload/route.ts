@@ -1,41 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
+import { parseCsvLine } from "@/lib/csv";
 
 function parsePayType(raw: string | undefined): "HOURLY" | "PER_JOB" {
   const norm = (raw || "").toLowerCase().replace(/[\s_-]/g, "");
   if (norm.includes("job") || norm.includes("salary") || norm.includes("perjob")) return "PER_JOB";
   return "HOURLY";
-}
-
-function parseCsvLine(line: string): string[] {
-  // Minimal CSV split: handles plain comma-separated values and
-  // double-quoted fields containing commas.
-  const cells: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        cur += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      cells.push(cur.trim());
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  cells.push(cur.trim());
-  return cells;
 }
 
 export async function POST(req: NextRequest) {

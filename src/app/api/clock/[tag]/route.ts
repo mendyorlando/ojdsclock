@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { toggleClock } from "@/lib/clock";
-import { computeYearStats, computeStreak } from "@/lib/hours";
+import { computeYearStats, computeStreak, streakMilestone } from "@/lib/hours";
 import { distanceMeters, schoolLocation } from "@/lib/geo";
 
 export async function POST(req: NextRequest, context: { params: Promise<{ tag: string }> }) {
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ tag: s
   const now = new Date();
   const year = await computeYearStats(user.id, now);
   const streak = result.type === "IN" ? await computeStreak(user.id, now) : null;
+  const milestone = streak !== null && !result.duplicate ? streakMilestone(streak) : null;
 
   return NextResponse.json({
     type: result.type,
@@ -42,5 +43,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ tag: s
     hoursThisMonth: year.hoursThisMonth,
     hoursThisYear: year.hoursThisYear,
     streak,
+    milestone,
   });
 }

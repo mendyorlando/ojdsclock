@@ -106,9 +106,31 @@ not frame anything as "behind" or "on track". Instead:
   with a CSV export.
 - The school week runs Sunday through Friday for totals ("this week" adds
   up Sunday through Saturday, not the conventional Monday-Sunday), but the
-  streak specifically skips both Saturday and Sunday: missing either one
-  never breaks it. Worked Sundays still count toward the hour totals, they
-  just aren't required to keep a streak alive.
+  streak specifically skips both Saturday and Sunday, and any date on the
+  school calendar (see below): missing any of those never breaks it.
+  Worked Sundays still count toward the hour totals, they just aren't
+  required to keep a streak alive.
+- Hitting a streak milestone (7, 30, 100, 180, 365 days, then every extra
+  365 after that, see `streakMilestone` in `src/lib/hours.ts`) shows a
+  small celebration on the tap-confirmation screen instead of the usual
+  streak pill, plus a short vibration on phones that support it.
+- Below "This week," a teacher's own dashboard has an "All History"
+  dropdown (no page reload, pure CSS) with every clock event on record for
+  that account, most recent first.
+
+## School calendar, so holidays don't break a streak
+
+`/admin/calendar` lets an admin mark specific dates (Yom Tov, breaks,
+in-service days, whatever) as closed. Those dates are excluded from the
+streak calculation the same way Saturday and Sunday already are, so a
+teacher's streak survives a school closure without anyone having to work
+around it.
+
+Add a single date with the small form, or upload a CSV with `date`
+(`YYYY-MM-DD`) and an optional `label` column to load a whole year's
+calendar at once, re-uploading later just updates labels and adds any new
+dates. This only affects streaks, it has no effect on hour totals or
+payroll: a real closed day naturally has no clock events on it anyway.
 
 ## Each teacher's detail page, and personalizing their info
 

@@ -12,6 +12,7 @@ type ResultData = {
   hoursThisMonth: number;
   hoursThisYear: number;
   streak: number | null;
+  milestone: number | null;
 };
 
 type State = { phase: "locating" } | { phase: "error"; message: string } | { phase: "result"; data: ResultData };
@@ -87,6 +88,11 @@ export function TapClient({ tag, firstName }: { tag: string; firstName: string }
     };
   }, [tag]);
 
+  useEffect(() => {
+    if (state.phase !== "result" || !("vibrate" in navigator)) return;
+    navigator.vibrate(state.data.milestone ? [40, 60, 40, 60, 120] : 45);
+  }, [state]);
+
   if (state.phase === "locating") {
     return (
       <div className="text-center">
@@ -121,16 +127,38 @@ export function TapClient({ tag, firstName }: { tag: string; firstName: string }
 
   const { data } = state;
   const isIn = data.type === "IN";
+  const milestone = data.milestone;
+
+  const confettiColors = ["#17ab9d", "#ff8f4d", "#7fd8cc", "#ffc48c"];
 
   return (
     <div className="text-center">
       <div className="relative mx-auto mb-6 h-36 w-36">
+        {milestone && (
+          <div className="pointer-events-none absolute -inset-x-10 -top-6 h-24 overflow-visible">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <span
+                key={i}
+                className="confetti-piece absolute h-2 w-2 rounded-sm"
+                style={{
+                  left: `${8 + i * 7.5}%`,
+                  top: 0,
+                  background: confettiColors[i % confettiColors.length],
+                  animation: `confetti-fall ${0.9 + (i % 4) * 0.15}s ease-in ${i * 0.05}s 1`,
+                }}
+              />
+            ))}
+          </div>
+        )}
         <div className="absolute inset-0 rounded-full border-2 border-teal-300/30 animate-[ping_2.4s_ease-out_infinite]" />
         <div
-          className={`absolute inset-3 rounded-full grid place-items-center shadow-2xl ${
+          className={`pop-in absolute inset-3 rounded-full grid place-items-center shadow-2xl ${
             isIn ? "bg-gradient-to-br from-teal-500 to-teal-900" : "bg-gradient-to-br from-orange-500 to-orange-700"
           }`}
-          style={{ boxShadow: "inset 0 2px 0 rgba(255,255,255,.25), 0 20px 40px -12px rgba(0,0,0,.55)" }}
+          style={{
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,.25), 0 20px 40px -12px rgba(0,0,0,.55)",
+            animation: "pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 1",
+          }}
         >
           <CheckIcon className="h-14 w-14 text-white" />
         </div>
@@ -151,7 +179,24 @@ export function TapClient({ tag, firstName }: { tag: string; firstName: string }
 
       <p className="text-teal-100/40 text-xs mt-1 font-bold uppercase tracking-wider">{tagLabel(tag)}</p>
 
-      {isIn && data.streak !== null && data.streak > 0 && (
+      {isIn && milestone && (
+        <div
+          className="pop-in mt-4 inline-flex flex-col items-center gap-0.5 rounded-2xl px-5 py-3"
+          style={{
+            background: "linear-gradient(155deg, var(--color-orange-500), var(--color-orange-700))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,.3), 0 16px 30px -12px rgba(217,95,28,.55)",
+            animation: "pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both",
+          }}
+        >
+          <span className="flex items-center gap-1.5 text-white text-sm font-extrabold">
+            <FlameIcon className="h-4 w-4 text-white" />
+            {milestone}-day streak!
+          </span>
+          <span className="text-orange-100 text-[11px] font-bold">That&apos;s a milestone. Keep it up.</span>
+        </div>
+      )}
+
+      {isIn && !milestone && data.streak !== null && data.streak > 0 && (
         <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-orange-500/15 text-orange-200 text-xs font-bold px-3.5 py-1.5">
           <FlameIcon className="h-3.5 w-3.5 text-orange-400" />
           {data.streak}-day streak

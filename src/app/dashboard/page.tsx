@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { computeWeekDays, computeStreak, computeYearStats } from "@/lib/hours";
 import { tagLabel } from "@/lib/tags";
 import { Nav } from "@/components/Nav";
-import { FlameIcon } from "@/components/icons";
+import { FlameIcon, ChevronDownIcon } from "@/components/icons";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
+
+const HISTORY_LIMIT = 500;
 
 function formatTime(d: Date | null) {
   if (!d) return null;
@@ -18,13 +21,20 @@ export default async function DashboardPage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const now = new Date();
-  const [days, streak, year] = await Promise.all([
+  const [days, streak, year, history] = await Promise.all([
     computeWeekDays(user.id, now),
     computeStreak(user.id, now),
     computeYearStats(user.id, now),
+    prisma.clockEvent.findMany({
+      where: { userId: user.id },
+      orderBy: { timestamp: "desc" },
+      take: HISTORY_LIMIT + 1,
+    }),
   ]);
 
   const currentlyIn = days.some((d) => d.inProgress);
+  const historyTruncated = history.length > HISTORY_LIMIT;
+  const historyEvents = history.slice(0, HISTORY_LIMIT);
 
   return (
     <div className="stage-light flex-1 flex flex-col">
@@ -134,6 +144,73 @@ export default async function DashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="glass-card rounded-[1.75rem] overflow-hidden md:col-span-2">
+            <input type="checkbox" id="all-history-toggle" className="peer hidden" />
+            <label
+              htmlFor="all-history-toggle"
+              className="flex items-center justify-between px-5 py-4 cursor-pointer"
+            >
+              <span className="text-sm font-extrabold text-ink">All History</span>
+              <ChevronDownIcon className="h-4 w-4 text-ink-soft shrink-0" />
+            </label>
+            <div className="hidden peer-checked:block">
+              {historyTruncated && (
+                <p className="px-5 pb-2 text-xs font-semibold text-ink-faint">
+                  Showing your most recent {HISTORY_LIMIT} entries.
+                </p>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-teal-100/50">
+                      <th className="text-left font-extrabold text-ink-soft text-xs uppercase tracking-wider px-5 py-3">
+                        Date
+                      </th>
+                      <th className="text-left font-extrabold text-ink-soft text-xs uppercase tracking-wider px-5 py-3">
+                        Time
+                      </th>
+                      <th className="text-left font-extrabold text-ink-soft text-xs uppercase tracking-wider px-5 py-3">
+                        Type
+                      </th>
+                      <th className="text-left font-extrabold text-ink-soft text-xs uppercase tracking-wider px-5 py-3">
+                        Where
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyEvents.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-5 py-6 text-center text-sm font-semibold text-ink-soft">
+                          No clock events yet.
+                        </td>
+                      </tr>
+                    )}
+                    {historyEvents.map((e, i) => (
+                      <tr key={e.id} className={i % 2 === 1 ? "bg-teal-100/20" : ""}>
+                        <td className="px-5 py-3 font-semibold text-ink">
+                          {e.timestamp.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </td>
+                        <td className="px-5 py-3 font-semibold text-ink tabular-nums">
+                          {e.timestamp.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`rounded-full text-xs font-extrabold px-3 py-1 ${
+                              e.type === "IN" ? "bg-good-bg text-good" : "bg-teal-100/60 text-ink-soft"
+                            }`}
+                          >
+                            {e.type}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 font-semibold text-ink-soft">{tagLabel(e.tagId)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
