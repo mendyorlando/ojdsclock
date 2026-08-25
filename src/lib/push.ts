@@ -48,9 +48,14 @@ async function sendToUser(userId: string, payload: Record<string, unknown>) {
           },
           JSON.stringify(payload),
         );
-      } catch {
-        // Subscription is stale (expired, browser data cleared, etc). Drop it.
-        await prisma.pushSubscription.deleteMany({ where: { id: sub.id } });
+      } catch (err) {
+        // Only drop the subscription when the push service itself says it
+        // no longer exists (404/410). A transient network or server error
+        // shouldn't silently unsubscribe someone from reminders.
+        const statusCode = (err as { statusCode?: number })?.statusCode;
+        if (statusCode === 404 || statusCode === 410) {
+          await prisma.pushSubscription.deleteMany({ where: { id: sub.id } });
+        }
       }
     }),
   );

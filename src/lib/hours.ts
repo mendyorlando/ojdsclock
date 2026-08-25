@@ -214,15 +214,24 @@ export async function computeRangeStats(
   const events = await fetchEvents(userId, from, to);
   const days = pairEvents(events, now);
 
-  const byTag: Record<string, number> = {};
+  // Recomputed from each session's raw start/end (not the already-rounded
+  // day.hours / session.hours) and rounded once at the end, so the total
+  // and the per-door breakdown always add up the same way instead of
+  // drifting apart from rounding at two different granularities.
+  const byTagRaw: Record<string, number> = {};
+  let totalRaw = 0;
   for (const day of days) {
     for (const s of day.sessions) {
-      byTag[s.tagId] = round1((byTag[s.tagId] || 0) + s.hours);
+      const rawHours = ((s.end ?? now).getTime() - s.start.getTime()) / 3_600_000;
+      byTagRaw[s.tagId] = (byTagRaw[s.tagId] || 0) + rawHours;
+      totalRaw += rawHours;
     }
   }
+  const byTag: Record<string, number> = {};
+  for (const [tagId, rawHours] of Object.entries(byTagRaw)) byTag[tagId] = round1(rawHours);
 
   return {
-    hours: round1(sum(days.map((d) => d.hours))),
+    hours: round1(totalRaw),
     daysWorked: days.filter((d) => d.hours > 0).length,
     byTag,
     days,
