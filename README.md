@@ -7,58 +7,75 @@ Postgres with a small config change when you are ready to go live.
 
 ## How the tap flow works
 
-Each entrance gets an NFC tag written with a plain URL, for example
-`https://yourapp.com/c/chabad-door`. No app install is needed on either
-iPhone or Android: tapping an NFC tag that carries a URL is a standard
-phone feature, and it just opens that page in the browser.
+Each entrance's NFC tag is an **NTAG 424 DNA** tag (not a plain sticker),
+programmed to rewrite part of its own URL on every single tap using an
+on-chip encryption key, for example
+`https://yourapp.com/c/chabad-door?picc_data=<changes every tap>&cmac=<changes every tap>`.
+No app install is needed on either iPhone or Android: tapping an NFC tag
+that carries a URL is a standard phone feature, and it just opens that
+page in the browser.
 
 - If the teacher is not signed in on that phone yet, they land on the login
-  screen, then get sent straight back to the tap page after signing in.
-- The tap page checks whether they are currently clocked in. If not, it
-  clocks them in. If they already are, it clocks them out. Either way they
-  see an instant confirmation, and which entrance they used.
-- A second tap within 15 seconds is treated as an accidental double tap and
-  is not recorded again, to guard against a phone bumping the tag twice.
+  screen, then get sent straight back to the tap page (with the tap's
+  one-time parameters intact) after signing in.
+- The server verifies the tap's `picc_data`/`cmac` against the tag's own
+  secret key before doing anything else (see "How a captured tap-link is
+  made useless" below). Only once that checks out does it look at whether
+  the teacher is currently clocked in: if not, it clocks them in; if they
+  already are, it clocks them out. Either way they see an instant
+  confirmation, and which entrance they used.
+- A second tap of the *same physical tag* within 15 seconds is treated as
+  an accidental double tap and is not recorded again, to guard against a
+  phone bumping the tag twice. Tapping a *different* door within that
+  window still counts as a separate, real event.
 - **Sessions do not expire in practice** (they last 10 years). A teacher
   signs in once on their own phone, and every tap after that is instant with
   no prompts. Signing out is a deliberate action from the menu, not
   something that happens on its own.
 - There is no button anywhere in the app that clocks someone in or out.
-  The only way to create a clock event is by visiting a tap URL, which in
-  the real world only happens by tapping a physical tag at the door. The one
-  narrow exception is the long-shift reminder flow described below, which
-  only appears after the system itself flags a suspiciously long open shift.
-- Before recording the tap, the phone is asked for its current location
-  once (not background tracking) and the request is rejected if it's too
-  far from school. See "The known gap in tap security" below for what this
-  does and doesn't protect against.
+  The only way to create a clock event is by visiting a tap URL with a
+  valid, not-yet-used signature, which in the real world only happens by
+  tapping a physical tag at the door. The one narrow exception is the
+  long-shift reminder flow described below, which only appears after the
+  system itself flags a suspiciously long open shift.
+- There is no location check of any kind. An earlier version asked the
+  phone for its GPS position and rejected taps that seemed far from
+  school, but phone GPS turned out to be unreliable enough (indoor signal,
+  "Precise Location" settings, Wi-Fi-based fallback positioning) to
+  regularly block real employees standing at the tag. It's gone entirely
+  now that the tag itself proves each tap is genuine and fresh.
 
-## The known gap in tap security, and the one-time location check
+## How a captured tap-link is made useless
 
-A tap URL is just a URL. Once a teacher has tapped it, that exact link sits
-in their phone's browser history, and nothing about opening it again
-distinguishes "I tapped the physical tag" from "I opened this link from
-home." A website can't fully close that gap on its own, the strongest fix
-(NFC tags that generate a fresh signed token per tap, verified on the
-server) needs specific hardware (NTAG 424 DNA tags) and is worth doing once
-those are in hand.
+A plain NFC tag just carries a fixed URL, so a copied or bookmarked link
+would work forever, no different from the tag itself. NTAG 424 DNA tags
+solve this in hardware: **Secure Dynamic Messaging (SDM)**. Every time the
+tag is read, before it hands the URL to the phone, the tag itself
+re-encrypts its own unique ID and a counter that only ever goes up, using
+an AES-128 key baked into the tag and known only to this app
+(`NTAG_SDM_META_KEY` / `NTAG_SDM_FILE_KEY` in `.env`). That produces the
+`picc_data` and `cmac` query parameters, different on every single tap.
 
-In the meantime, `/api/clock/[tag]` asks the phone for its current GPS
-position once, at the moment of tapping, and rejects the request if it's
-further than `SCHOOL_RADIUS_METERS` from `SCHOOL_LAT`/`SCHOOL_LNG` (see
-`.env`). This stops the casual case (clocking in from home), but it isn't a
-hard guarantee: GPS can be off by tens of meters indoors, and it only
-checks where the phone is, not who's holding it.
+`src/lib/ntag424.ts` decrypts and verifies that signature server-side
+(ported from NXP's own application note, AN12196, and cross-checked
+against a working open-source reference implementation and the official
+RFC 4493 AES-CMAC test vector). `src/lib/nfcTags.ts` then checks the
+decoded counter against the last one seen from that exact tag
+(`NfcTag.lastCounter` in the database): a tap is only accepted if its
+counter is strictly higher than the last accepted one for that tag.
 
-The coordinates in `.env` were decoded from the school's Plus Code
-(`76WWFG28+6X`) using the `open-location-code` npm package, `28.4505625,
--81.4825625`. That's a precise pin, not an estimate, so the 200m radius
-should hold up in practice.
+The result: the moment a real tap is accepted, that URL's counter is
+already spent. Copying the link, bookmarking it, or checking browser
+history and reopening it later does nothing, the counter hasn't moved, so
+the server rejects it as already used. There's no location check needed
+to catch this, the cryptography does it directly, and it can't be
+tricked by a stale link the way GPS could be tricked by a spoofed
+location.
 
-GPS only checks where the phone is, not who's holding it, so it doesn't
-stop someone from signing out of their own account and into a coworker's on
-the same phone to tap for them. Device binding (below) closes that specific
-gap instead.
+A tag's UID is registered the first time it's ever seen (using the URL
+path, e.g. `chabad-door`, as its label), so there's no manual setup step
+in the database, just program the tags correctly (see "Programming a real
+NFC tag" below) and the first real tap of each one registers it.
 
 ## Device binding, so an account can't be signed into on a coworker's phone
 
@@ -243,29 +260,84 @@ Seeded logins:
 | Teacher | cadler   | teacher123   |
 | Teacher | ybraun   | teacher123   |
 
-## Trying the tap flow
+## Trying the tap flow without a physical tag
 
-Visiting `/c/chabad-door` in a browser is exactly what happens when an
-NFC tag written with that URL gets tapped. To try the full flow:
+Because every real tap needs a valid, not-yet-used cryptographic
+signature (see "How a captured tap-link is made useless" above), visiting
+a bare URL like `/c/chabad-door` with no `picc_data`/`cmac` params no
+longer clocks anyone in, it shows an error, the same as it would for a
+real teacher who somehow landed on that page without tapping the tag.
 
-1. Open an incognito window (so you're signed out) and go to
-   `http://localhost:3000/c/chabad-door`.
-2. You'll be asked to sign in. Do so with any teacher account.
-3. You'll land back on the tap page, now clocked in.
-4. Visit the same URL, or `/c/ojds-door`, again later to clock out.
+To simulate a genuine tap for local testing, generate one with the same
+keys as your `.env`:
 
-To test this from an actual phone on your network instead of a browser tab,
-run `npm run dev`, then check the terminal output for a "Network" URL such
-as `http://192.168.1.29:3000`, and open that on your phone (same wifi).
+```js
+// scratch-simulate-tap.mjs, run with: node scratch-simulate-tap.mjs <uidHex> <counter>
+import { createCipheriv } from "crypto";
+import { AesCmac } from "aes-cmac";
+
+const META_KEY = Buffer.from(process.env.NTAG_SDM_META_KEY, "hex");
+const FILE_KEY = Buffer.from(process.env.NTAG_SDM_FILE_KEY, "hex");
+const SV2_PREFIX = Buffer.from([0x3c, 0xc3, 0x00, 0x01, 0x00, 0x80]);
+const pad = (b) => (b.length % 16 === 0 ? b : Buffer.concat([b, Buffer.alloc(16 - (b.length % 16))]));
+
+const [, , uidHex, counterStr] = process.argv;
+const uid = Buffer.from(uidHex, "hex");
+const counter = parseInt(counterStr, 10);
+const ctr = Buffer.from([counter & 0xff, (counter >> 8) & 0xff, (counter >> 16) & 0xff]);
+const piccPlain = Buffer.concat([Buffer.from([0xc7]), uid, ctr, Buffer.alloc(5)]);
+
+const cipher = createCipheriv("aes-128-cbc", FILE_KEY, Buffer.alloc(16));
+cipher.setAutoPadding(false);
+const piccEnc = Buffer.concat([cipher.update(piccPlain), cipher.final()]);
+
+const sessionKey = Buffer.from(await new AesCmac(META_KEY).calculate(pad(Buffer.concat([SV2_PREFIX, uid, ctr]))));
+const full = Buffer.from(await new AesCmac(sessionKey).calculate(Buffer.alloc(0)));
+const mac = Buffer.alloc(8);
+for (let i = 0; i < 8; i++) mac[i] = full[i * 2 + 1];
+
+console.log(`http://localhost:3000/c/chabad-door?picc_data=${piccEnc.toString("hex")}&cmac=${mac.toString("hex")}`);
+```
+
+Run it with an increasing counter each time (`node scratch-simulate-tap.mjs 04AABBCCDDEE00 1`,
+then `2`, then `3`, ...) since each tag UID only accepts a strictly higher
+counter than the last one it saw, exactly like a real tag would produce.
+The first counter you use for a given UID registers it; re-running the
+same counter again should be rejected as a replay, that's the anti-replay
+protection working correctly.
 
 ## Programming a real NFC tag
 
-Any cheap NTAG213/215 sticker works. Use a free app such as "NFC Tools"
-(iOS or Android) to write a single URL record pointing at your deployed
-`/c/chabad-door` or `/c/ojds-door` page (or rename the tag IDs to
-whatever you like in `src/lib/tags.ts`). Tapping the tag then behaves
-exactly like visiting that URL, on iPhone and Android alike, no app
-required.
+This app needs **NTAG 424 DNA** tags specifically (not a plain
+NTAG213/215 sticker), and a different app than a simple URL writer:
+**"NFC TagWriter by NXP"** (free, iOS/Android), since it's what supports
+configuring the tag's Secure Dynamic Messaging feature.
+
+1. Generate a 16-byte AES key as hex (`node -e "console.log(require('crypto').randomBytes(16).toString('hex').toUpperCase())"`)
+   and set it as both `NTAG_SDM_META_KEY` and `NTAG_SDM_FILE_KEY` in your
+   environment (using the same value for both is fine here, since this
+   setup never uses SDM's separate encrypted-file-data feature).
+2. In TagWriter: **Write tags → Link**, and enter your tap URL with two
+   placeholder runs of zeros for the parameters this app expects:
+   `https://yourapp.com/c/chabad-door?picc_data=00000000000000000000000000000000&cmac=0000000000000000`
+   (32 zeros for `picc_data`, 16 zeros for `cmac`).
+3. Tap **Configure Mirroring**, set the card type to **NTAG424DNA**, and
+   enable **PICC Data mirroring** (this covers the tag's UID and read
+   counter together) mapped to the `picc_data` placeholder, plus **SDM
+   MAC** mirroring mapped to the `cmac` placeholder. Leave file-data
+   mirroring off, this app doesn't use it.
+4. When prompted for the SDM keys, enter the exact same hex value from
+   step 1 for both the **SDM Meta Read Key** and **SDM File Read Key**.
+   Leave the tag's other keys (like the master/change key) at their
+   defaults unless you specifically want to lock down rewriting the tag
+   later, getting that wrong can permanently lock you out of the tag.
+5. Write the tag, then tap it with a phone to confirm the URL now shows
+   long, different-looking `picc_data`/`cmac` values instead of zeros,
+   and that they visibly change on a second tap.
+
+Repeat for the second entrance's tag. The two tags can share the same
+keys since each is identified by its own unique UID, registered
+automatically the first time it's tapped for real (see above).
 
 ## Admin: importing the teacher roster
 
@@ -356,7 +428,7 @@ SQLite, so this is the live setup now, not a future step.
 5. **Vercel**: import the GitHub repo as a new project. In its
    Environment Variables settings, set: `DATABASE_URL`, `DIRECT_URL`,
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
-   `CRON_SECRET`, `SCHOOL_LAT`, `SCHOOL_LNG`, `SCHOOL_RADIUS_METERS`
+   `CRON_SECRET`, `NTAG_SDM_META_KEY`, `NTAG_SDM_FILE_KEY`
    (generate fresh VAPID keys and a fresh `CRON_SECRET` for production,
    don't reuse the local dev ones in `.env`). Deploy.
 6. **Vercel Cron**: `vercel.json` already has a cron entry hitting
@@ -372,8 +444,9 @@ SQLite, so this is the live setup now, not a future step.
 ## What's built vs. what's next
 
 Built: username and password login with effectively permanent sessions,
-the tap-to-clock flow with duplicate-tap protection and a one-time location
-check, two tracked entrances, a personal metrics dashboard, a
+the tap-to-clock flow with duplicate-tap protection and cryptographic
+per-tap replay protection (NTAG 424 DNA SDM), two tracked entrances, a
+personal metrics dashboard, a
 mobile-friendly admin overview with staff-wide metrics, a per-teacher
 detail page with editable info and full clock history, CSV roster import,
 custom date range reporting with CSV export, teacher-submitted correction

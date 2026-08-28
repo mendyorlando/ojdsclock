@@ -15,7 +15,7 @@ type ResultData = {
   milestone: number | null;
 };
 
-type State = { phase: "locating" } | { phase: "error"; message: string } | { phase: "result"; data: ResultData };
+type State = { phase: "submitting" } | { phase: "error"; message: string } | { phase: "result"; data: ResultData };
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -25,39 +25,75 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
-export function TapClient({ tag, firstName }: { tag: string; firstName: string }) {
-  const [state, setState] = useState<State>({ phase: "locating" });
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid: "That link isn't valid. Please tap the entrance tag again.",
+  replayed: "That link has already been used. Please tap the entrance tag again to clock in.",
+  not_configured: "Something isn't set up right yet. Please contact your administrator.",
+};
+
+type SubmitOutcome = { ok: true; data: ResultData } | { ok: false; errorCode?: string };
+
+// Keyed by tag+piccData+cmac, outside React's render lifecycle: this
+// tag's own SDM counter makes every real tap's payload unique, but React
+// (in development) can mount this component twice for the exact same
+// props. Sharing one in-flight request's resolved outcome per key means
+// a double-mount reuses the first request's result instead of firing a
+// second POST, which the server would then correctly reject as a replay
+// of the first tap.
+const inFlightTaps = new Map<string, Promise<SubmitOutcome>>();
+
+export function TapClient({
+  tag,
+  firstName,
+  piccData,
+  cmac,
+}: {
+  tag: string;
+  firstName: string;
+  piccData?: string;
+  cmac?: string;
+}) {
+  const [state, setState] = useState<State>({ phase: "submitting" });
 
   useEffect(() => {
+    if (!piccData || !cmac) {
+      setState({ phase: "error", message: "That link isn't valid on its own. Please tap the entrance tag to clock in." });
+      return;
+    }
+
     let cancelled = false;
 
-    async function submit(lat: number | null, lng: number | null) {
-      try {
-        const res = await fetch(`/api/clock/${tag}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat, lng }),
-        });
+    async function submit() {
+      const key = `${tag}:${piccData}:${cmac}`;
+      let outcome = inFlightTaps.get(key);
 
+      if (!outcome) {
+        outcome = (async (): Promise<SubmitOutcome> => {
+          const res = await fetch(`/api/clock/${tag}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ piccData, cmac }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            return { ok: false, errorCode: body?.error };
+          }
+          return { ok: true, data: (await res.json()) as ResultData };
+        })();
+        inFlightTaps.set(key, outcome);
+      }
+
+      try {
+        const result = await outcome;
         if (cancelled) return;
 
-        if (res.status === 403) {
-          const data = await res.json();
-          const km = Math.round((data.distanceMeters / 1000) * 10) / 10;
-          setState({
-            phase: "error",
-            message: `You're about ${km} km from school, so this can't clock you in from here.`,
-          });
+        if (!result.ok) {
+          const message = ERROR_MESSAGES[result.errorCode ?? ""] ?? "Something went wrong. Please tap the entrance tag again.";
+          setState({ phase: "error", message });
           return;
         }
 
-        if (!res.ok) {
-          setState({ phase: "error", message: "Something went wrong. Please tap the entrance tag again." });
-          return;
-        }
-
-        const data = (await res.json()) as ResultData;
-        setState({ phase: "result", data });
+        setState({ phase: "result", data: result.data });
       } catch {
         if (!cancelled) {
           setState({ phase: "error", message: "Couldn't reach the server. Check your connection and try again." });
@@ -65,35 +101,18 @@ export function TapClient({ tag, firstName }: { tag: string; firstName: string }
       }
     }
 
-    if (!("geolocation" in navigator)) {
-      submit(null, null);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => submit(pos.coords.latitude, pos.coords.longitude),
-      (err) => {
-        if (cancelled) return;
-        const message =
-          err.code === err.PERMISSION_DENIED
-            ? "Location access is off for this site. Turn it on in your phone's settings, then tap the entrance tag again."
-            : "Couldn't get your location in time. Tap the entrance tag again.";
-        setState({ phase: "error", message });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-
+    submit();
     return () => {
       cancelled = true;
     };
-  }, [tag]);
+  }, [tag, piccData, cmac]);
 
   useEffect(() => {
     if (state.phase !== "result" || !("vibrate" in navigator)) return;
     navigator.vibrate(state.data.milestone ? [40, 60, 40, 60, 120] : 45);
   }, [state]);
 
-  if (state.phase === "locating") {
+  if (state.phase === "submitting") {
     return (
       <div className="text-center">
         <div className="relative mx-auto mb-6 h-36 w-36">
@@ -102,10 +121,7 @@ export function TapClient({ tag, firstName }: { tag: string; firstName: string }
             <div className="h-9 w-9 rounded-full border-[3px] border-white/30 border-t-white animate-spin" />
           </div>
         </div>
-        <h1 className="text-2xl font-extrabold text-white tracking-tight text-balance">
-          Hi {firstName}, confirming you&apos;re at school
-        </h1>
-        <p className="text-teal-100/60 text-sm mt-2 font-semibold">One second...</p>
+        <h1 className="text-2xl font-extrabold text-white tracking-tight text-balance">Hi {firstName}, one second...</h1>
       </div>
     );
   }
