@@ -29,6 +29,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid: "That link isn't valid. Please tap the entrance tag again.",
   replayed: "That link has already been used. Please tap the entrance tag again to clock in.",
   not_configured: "Something isn't set up right yet. Please contact your administrator.",
+  too_far: "You don't seem to be at the school. Please try again once you're there.",
+  location_denied: "We need your location to clock you in. Please allow location access and try again.",
 };
 
 type SubmitOutcome = { ok: true; data: ResultData } | { ok: false; errorCode?: string };
@@ -56,17 +58,11 @@ export function TapClient({
   const [state, setState] = useState<State>({ phase: "submitting" });
 
   useEffect(() => {
-    if (!piccData || !cmac) {
-      setState({ phase: "error", message: "That link isn't valid on its own. Please tap the entrance tag to clock in." });
-      return;
-    }
-
     let cancelled = false;
 
-    async function submit() {
+    async function submitWithPicc(piccData: string, cmac: string) {
       const key = `${tag}:${piccData}:${cmac}`;
       let outcome = inFlightTaps.get(key);
-
       if (!outcome) {
         outcome = (async (): Promise<SubmitOutcome> => {
           const res = await fetch(`/api/clock/${tag}`, {
@@ -82,9 +78,49 @@ export function TapClient({
         })();
         inFlightTaps.set(key, outcome);
       }
+      return outcome;
+    }
 
+    async function submitWithLocation() {
+      const key = `${tag}:geo`;
+      let outcome = inFlightTaps.get(key);
+      if (!outcome) {
+        outcome = (async (): Promise<SubmitOutcome> => {
+          let position: GeolocationPosition;
+          try {
+            position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              if (!("geolocation" in navigator)) {
+                reject(new Error("unsupported"));
+                return;
+              }
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 15000,
+              });
+            });
+          } catch {
+            return { ok: false, errorCode: "location_denied" };
+          }
+
+          const res = await fetch(`/api/clock/${tag}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lat: position.coords.latitude, lng: position.coords.longitude }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            return { ok: false, errorCode: body?.error };
+          }
+          return { ok: true, data: (await res.json()) as ResultData };
+        })();
+        inFlightTaps.set(key, outcome);
+      }
+      return outcome;
+    }
+
+    async function submit() {
       try {
-        const result = await outcome;
+        const result = piccData && cmac ? await submitWithPicc(piccData, cmac) : await submitWithLocation();
         if (cancelled) return;
 
         if (!result.ok) {
