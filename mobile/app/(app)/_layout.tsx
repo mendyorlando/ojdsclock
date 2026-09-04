@@ -27,6 +27,14 @@ export default function AppLayout() {
       <Tabs.Screen name="dashboard" options={{ title: "Hours", tabBarIcon: tabIcon("reader-outline") }} />
       <Tabs.Screen name="history" options={{ title: "History", tabBarIcon: tabIcon("calendar-outline") }} />
       <Tabs.Screen
+        name="admin-requests"
+        options={{
+          title: "Requests",
+          href: isAdmin ? undefined : null,
+          tabBarIcon: tabIcon("checkmark-done-outline"),
+        }}
+      />
+      <Tabs.Screen
         name="provision"
         options={{ title: "Setup Tag", href: isAdmin ? undefined : null, tabBarIcon: tabIcon("construct-outline") }}
       />
