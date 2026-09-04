@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { AuthProvider } from "@/lib/AuthContext";
+import { initNfc } from "@/lib/nfc";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -33,6 +34,9 @@ function useNotificationTapRedirect() {
 
 export default function RootLayout() {
   useNotificationTapRedirect();
+  useEffect(() => {
+    initNfc().catch(() => {});
+  }, []);
 
   return (
     <AuthProvider>
