@@ -113,7 +113,7 @@ export default function AdminRequestsScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
     >
       <Text style={styles.sectionTitle}>Device sign-in requests</Text>
       {devicePending.length === 0 ? (

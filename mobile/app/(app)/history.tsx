@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, StyleSheet, Pressable } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { apiFetch } from "@/lib/api";
 import { tagLabel } from "@/lib/config";
@@ -11,6 +11,7 @@ export default function HistoryScreen() {
   const [events, setEvents] = useState<ClockEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
 
@@ -30,6 +31,12 @@ export default function HistoryScreen() {
       loadFirstPage().finally(() => setLoading(false));
     }, [loadFirstPage]),
   );
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadFirstPage();
+    setRefreshing(false);
+  }
 
   async function loadMore() {
     if (!cursor || loadingMore) return;
@@ -56,7 +63,10 @@ export default function HistoryScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.empty}>Couldn&apos;t load your history. Pull down or reopen this tab to retry.</Text>
+        <Text style={styles.empty}>Couldn&apos;t load your history. Check your connection and try again.</Text>
+        <Pressable style={styles.retryButton} onPress={loadFirstPage}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
@@ -69,6 +79,7 @@ export default function HistoryScreen() {
       keyExtractor={(e) => e.id}
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
       ListEmptyComponent={<Text style={styles.empty}>No clock events yet.</Text>}
       ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} /> : null}
       renderItem={({ item }) => {
@@ -96,9 +107,11 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f4faf9" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   content: { padding: 16 },
   empty: { textAlign: "center", color: "#4b6b68", marginTop: 40, fontWeight: "600" },
+  retryButton: { marginTop: 16, backgroundColor: "#17ab9d", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
+  retryButtonText: { color: "#fff", fontWeight: "700" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -105,7 +105,7 @@ export default function DashboardScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
     >
       <Text style={styles.greeting}>{user?.name.split(" ")[0]}&apos;s hours</Text>
       <Text style={styles.status}>{summary.currentlyIn ? "Currently clocked in" : "Not clocked in right now"}</Text>
