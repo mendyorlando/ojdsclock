@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "OJDS Clock",
+    "slug": "ojds-clock",
+    "scheme": "ojdsclock",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "org.ojds.clock"
+    },
+    "android": {
+      "package": "org.ojds.clock",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "react-native-nfc-manager",
+        {
+          "selectIdentifiers": ["D2760000850101"],
+          "nfcPermission": "Allow OJDS Clock to read the entrance tag to clock you in and out."
+        }
+      ],
+      "expo-secure-store",
+      "expo-router",
+      "expo-splash-screen",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "OJDS Clock uses your location to remind you to clock out when you leave the building.",
+          "locationWhenInUsePermission": "OJDS Clock uses your location to remind you to clock out when you leave the building.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0f766e"
+        }
+      ]
+    ]
+  }
+}
