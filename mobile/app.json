@@ -18,10 +18,9 @@
     "android": {
       "package": "org.ojds.clock",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0b3b38",
+        "foregroundImage": "./assets/splash-icon.png",
+        "monochromeImage": "./assets/splash-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
@@ -79,7 +78,8 @@
           "backgroundColor": "#0b3b38"
         }
       ],
-      "./plugins/withSpacePathFix"
+      "./plugins/withSpacePathFix",
+      "./plugins/withNdefIntentFilter"
     ]
   }
 }
