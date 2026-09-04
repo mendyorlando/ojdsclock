@@ -12,7 +12,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "org.ojds.clock",
       "appleTeamId": "WN48H47YZX",
-      "associatedDomains": ["applinks:ojdsclock.vercel.app"]
+      "associatedDomains": ["applinks:ojdsclock.vercel.app"],
+      "buildNumber": "1"
     },
     "android": {
       "package": "org.ojds.clock",
