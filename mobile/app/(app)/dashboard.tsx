@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Switch, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
+import { enableGeofence, disableGeofence, isGeofenceEnabled } from "@/lib/geofence";
 
 type DaySummary = {
   label: string;
@@ -28,6 +29,36 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [geofenceOn, setGeofenceOn] = useState(false);
+  const [geofenceBusy, setGeofenceBusy] = useState(false);
+
+  useEffect(() => {
+    isGeofenceEnabled().then(setGeofenceOn);
+  }, []);
+
+  async function onToggleGeofence(next: boolean) {
+    setGeofenceBusy(true);
+    try {
+      if (next) {
+        const result = await enableGeofence();
+        if (result === "ok") {
+          setGeofenceOn(true);
+        } else {
+          Alert.alert(
+            "Location permission needed",
+            result === "background_denied"
+              ? "To remind you to clock out automatically, please allow location access \"Always\" in Settings."
+              : "Please allow location access to enable clock-out reminders.",
+          );
+        }
+      } else {
+        await disableGeofence();
+        setGeofenceOn(false);
+      }
+    } finally {
+      setGeofenceBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -114,6 +145,18 @@ export default function DashboardScreen() {
         ))}
       </View>
 
+      <View style={styles.geofenceCard}>
+        <View style={styles.geofenceTextWrap}>
+          <Text style={styles.geofenceTitle}>Clock-out reminder</Text>
+          <Text style={styles.geofenceSubtitle}>Get a reminder to clock out when you leave the school</Text>
+        </View>
+        {geofenceBusy ? (
+          <ActivityIndicator />
+        ) : (
+          <Switch value={geofenceOn} onValueChange={onToggleGeofence} />
+        )}
+      </View>
+
       <Pressable style={styles.signOut} onPress={signOut}>
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
@@ -158,6 +201,20 @@ const styles = StyleSheet.create({
   dayRowToday: { backgroundColor: "#fff3e8" },
   dayLabel: { fontWeight: "700", color: "#4b6b68", fontSize: 12 },
   dayHours: { fontWeight: "700", color: "#0b3b38" },
+  geofenceCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#e5efee",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  geofenceTextWrap: { flex: 1, marginRight: 12 },
+  geofenceTitle: { fontWeight: "800", color: "#0b3b38", fontSize: 14 },
+  geofenceSubtitle: { color: "#4b6b68", fontSize: 12, marginTop: 2, fontWeight: "600" },
   signOut: { marginTop: 32, alignItems: "center" },
   signOutText: { color: "#b5443a", fontWeight: "700" },
 });

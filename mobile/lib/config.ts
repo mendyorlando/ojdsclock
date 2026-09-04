@@ -36,3 +36,10 @@ const TAG_LABELS: Record<string, string> = {
 export function tagLabel(tagId: string): string {
   return TAG_LABELS[tagId] || tagId;
 }
+
+// Must match the server's SCHOOL_LAT/SCHOOL_LNG/SCHOOL_RADIUS_METERS
+// (webapp/.env) - not secrets, just the school's public address, so a
+// plain default is fine here (unlike NTAG_KEY_HEX above).
+export const SCHOOL_LAT = Number(process.env.EXPO_PUBLIC_SCHOOL_LAT ?? "28.4504497");
+export const SCHOOL_LNG = Number(process.env.EXPO_PUBLIC_SCHOOL_LNG ?? "-81.4825767");
+export const SCHOOL_RADIUS_METERS = Number(process.env.EXPO_PUBLIC_SCHOOL_RADIUS_METERS ?? "700");

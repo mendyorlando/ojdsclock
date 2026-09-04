@@ -30,31 +30,31 @@ export const ERROR_MESSAGES: Record<string, string> = {
 };
 
 /**
- * Shared "send a tap to the server and show the result" logic, used both
- * by a live NFC read (tap.tsx) and a Universal Link opened from a tag
- * detected in the background (app/c/[tag].tsx) - the two only differ in
- * how they get {tag, piccData, cmac}, not in what happens after.
+ * Shared "call the server, show the result" state machine - the part that
+ * a live NFC read (tap.tsx), a Universal Link tap (app/c/[tag].tsx), and a
+ * geofence-exit confirm (geofence-confirm.tsx) all have in common. They
+ * only differ in which endpoint they call and with what body.
  */
-export function useTapSubmission() {
+function useSubmission<Payload>(call: (payload: Payload) => Promise<ResultData>) {
   const [state, setState] = useState<SubmissionState>({ phase: "idle" });
 
-  const submit = useCallback(async (payload: { tag: string; piccData: string; cmac: string }) => {
-    setState({ phase: "submitting" });
-    try {
-      const data = await apiFetch<ResultData>(`/api/clock/${payload.tag}`, {
-        method: "POST",
-        body: JSON.stringify({ piccData: payload.piccData, cmac: payload.cmac }),
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      if (data.milestone) {
-        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}), 200);
+  const submit = useCallback(
+    async (payload: Payload) => {
+      setState({ phase: "submitting" });
+      try {
+        const data = await call(payload);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        if (data.milestone) {
+          setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}), 200);
+        }
+        setState({ phase: "result", data });
+      } catch (err) {
+        const code = err instanceof ApiError ? err.code : undefined;
+        setState({ phase: "error", message: ERROR_MESSAGES[code ?? ""] ?? "Something went wrong. Please try again." });
       }
-      setState({ phase: "result", data });
-    } catch (err) {
-      const code = err instanceof ApiError ? err.code : undefined;
-      setState({ phase: "error", message: ERROR_MESSAGES[code ?? ""] ?? "Something went wrong. Please try again." });
-    }
-  }, []);
+    },
+    [call],
+  );
 
   const reset = useCallback(() => setState({ phase: "idle" }), []);
 
@@ -63,4 +63,23 @@ export function useTapSubmission() {
   const setError = useCallback((message: string) => setState({ phase: "error", message }), []);
 
   return { state, submit, reset, setError };
+}
+
+export function useTapSubmission() {
+  return useSubmission(async (payload: { tag: string; piccData: string; cmac: string }) =>
+    apiFetch<ResultData>(`/api/clock/${payload.tag}`, {
+      method: "POST",
+      body: JSON.stringify({ piccData: payload.piccData, cmac: payload.cmac }),
+    }),
+  );
+}
+
+/**
+ * Clocks the user out with no tag involved - used by the geofence-exit
+ * reminder notification. Mirrors the web app's "Still at school? / No,
+ * clock me out" reminder-confirm flow server-side (see
+ * src/app/api/clock/confirm/route.ts).
+ */
+export function useConfirmClockOut() {
+  return useSubmission<void>(async () => apiFetch<ResultData>("/api/clock/confirm", { method: "POST" }));
 }

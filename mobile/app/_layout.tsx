@@ -3,6 +3,10 @@ import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { AuthProvider } from "@/lib/AuthContext";
 import { initNfc } from "@/lib/nfc";
+// Import for its side effect: registers the geofencing background task.
+// Must happen at module load (not inside a component) since iOS can
+// relaunch the app in the background purely to deliver a geofence event.
+import "@/lib/geofence";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -44,6 +48,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />
         <Stack.Screen name="c/[tag]" />
+        <Stack.Screen name="geofence-confirm" />
       </Stack>
     </AuthProvider>
   );
