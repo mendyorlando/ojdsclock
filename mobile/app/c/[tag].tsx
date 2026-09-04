@@ -20,13 +20,22 @@ export default function TapLinkScreen() {
   // A used-up link can't just be retried (its counter is already
   // consumed) - send them to the tap screen to scan fresh instead.
   const goToTapScreen = () => router.replace("/(app)/tap");
-  const submitted = useRef(false);
+  // Tapping a second tag while this screen is still showing the first
+  // tap's result updates this same screen's params rather than mounting
+  // a fresh instance, so a plain "have we submitted yet" boolean would
+  // never reset and the second tap would silently do nothing. Track
+  // which exact payload was last submitted instead, so a genuinely new
+  // tap (different tag/picc_data/cmac) always goes through.
+  const lastSubmittedKey = useRef<string | null>(null);
 
   useEffect(() => {
-    if (isLoading || !user || submitted.current) return;
+    if (isLoading || !user) return;
     if (!params.tag || !params.picc_data || !params.cmac) return;
 
-    submitted.current = true;
+    const key = `${params.tag}:${params.picc_data}:${params.cmac}`;
+    if (lastSubmittedKey.current === key) return;
+
+    lastSubmittedKey.current = key;
     submit({ tag: params.tag, piccData: params.picc_data, cmac: params.cmac });
   }, [isLoading, user, params.tag, params.picc_data, params.cmac, submit]);
 
