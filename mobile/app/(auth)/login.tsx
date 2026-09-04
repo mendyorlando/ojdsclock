@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   TextInput,
   Pressable,
   ActivityIndicator,
@@ -51,6 +52,7 @@ export default function LoginScreen() {
         style={styles.flex}
       >
         <View style={styles.content}>
+          <Image source={require("@/assets/ojds-logo.png")} style={styles.logo} resizeMode="contain" />
           <Text style={styles.title}>OJDS Clock</Text>
           <Text style={styles.subtitle}>Sign in to clock in or out</Text>
 
@@ -99,6 +101,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0b3b38" },
   flex: { flex: 1 },
   content: { flex: 1, justifyContent: "center", paddingHorizontal: 28 },
+  logo: { width: 72, height: 72, alignSelf: "center", marginBottom: 16 },
   title: { fontSize: 28, fontWeight: "800", color: "#fff", textAlign: "center" },
   subtitle: { fontSize: 14, color: "rgba(255,255,255,0.6)", textAlign: "center", marginTop: 6, marginBottom: 32 },
   field: { marginBottom: 16 },
