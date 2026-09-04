@@ -10,7 +10,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "org.ojds.clock"
+      "bundleIdentifier": "org.ojds.clock",
+      "appleTeamId": "WN48H47YZX",
+      "associatedDomains": ["applinks:ojdsclock.vercel.app"]
     },
     "android": {
       "package": "org.ojds.clock",
