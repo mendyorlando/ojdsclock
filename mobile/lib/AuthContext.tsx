@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
-import { getStoredSession, logout as logoutStorage, type CurrentUser } from "./auth";
+import { getStoredSession, logout as logoutStorage, onSessionInvalidated, type CurrentUser } from "./auth";
 
 type AuthState = {
   user: CurrentUser | null;
@@ -22,6 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh().finally(() => setIsLoading(false));
   }, [refresh]);
+
+  useEffect(() => onSessionInvalidated(() => setUser(null)), []);
 
   const signOut = useCallback(async () => {
     await logoutStorage();

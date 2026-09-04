@@ -1,5 +1,6 @@
+import { router } from "expo-router";
 import { API_BASE_URL } from "./config";
-import { getStoredSession } from "./auth";
+import { getStoredSession, clearLocalSession } from "./auth";
 
 export class ApiError extends Error {
   status: number;
@@ -27,6 +28,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    // A 401 means the server has already decided this session doesn't
+    // exist - retrying with the same token will never succeed, so there's
+    // no point leaving the user stranded on whatever screen they were on.
+    if (res.status === 401 && session) {
+      await clearLocalSession();
+      router.replace("/(auth)/login");
+    }
     throw new ApiError(res.status, body?.error);
   }
 

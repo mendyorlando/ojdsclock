@@ -72,6 +72,33 @@ export async function logout() {
   await SecureStore.deleteItemAsync(USER_KEY);
 }
 
+// A plain module-level pub/sub so code outside React (api.ts, which has
+// no access to AuthContext's setUser) can tell the app "the session is
+// gone" and have AuthContext react to it, instead of the UI being stuck
+// showing screens for a user that's no longer actually signed in.
+type Listener = () => void;
+let sessionInvalidatedListeners: Listener[] = [];
+
+export function onSessionInvalidated(listener: Listener) {
+  sessionInvalidatedListeners.push(listener);
+  return () => {
+    sessionInvalidatedListeners = sessionInvalidatedListeners.filter((l) => l !== listener);
+  };
+}
+
+/**
+ * Clears local storage only, with no server call - for when the server
+ * has already told us the session is gone (a 401 response), so there's
+ * nothing left to ask it to delete. `logout()` is for the user actively
+ * choosing to sign out; this is for the app discovering it already
+ * happened (e.g. an admin unbound the device, or the session expired).
+ */
+export async function clearLocalSession() {
+  await SecureStore.deleteItemAsync(SESSION_KEY);
+  await SecureStore.deleteItemAsync(USER_KEY);
+  sessionInvalidatedListeners.forEach((l) => l());
+}
+
 export async function getStoredSession(): Promise<{ sessionId: string; user: CurrentUser } | null> {
   const [sessionId, userJson] = await Promise.all([
     SecureStore.getItemAsync(SESSION_KEY),
