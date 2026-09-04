@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
@@ -28,11 +28,22 @@ export async function createSession(userId: string) {
     expires: expiresAt,
     path: "/",
   });
+  return session.id;
 }
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  let token = cookieStore.get(SESSION_COOKIE)?.value;
+
+  // The mobile app has no cookie jar shared with the browser, so it
+  // authenticates with the same session id sent as a bearer token instead.
+  if (!token) {
+    const authHeader = (await headers()).get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice("Bearer ".length).trim();
+    }
+  }
+
   if (!token) return null;
 
   const session = await prisma.session.findUnique({
