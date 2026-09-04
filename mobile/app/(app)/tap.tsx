@@ -122,22 +122,30 @@ export default function TapScreen() {
 
   return (
     <View style={styles.center}>
-      <Image source={require("@/assets/ojds-logo.png")} style={styles.logo} resizeMode="contain" />
-      <Pressable
-        style={[styles.tapButton, nfcState.phase === "scanning" && styles.tapButtonBusy]}
-        onPress={handleTap}
-        disabled={nfcState.phase === "scanning"}
-      >
-        {nfcState.phase === "idle" ? (
-          <Text style={styles.tapButtonText}>Tap to{"\n"}Clock In/Out</Text>
-        ) : (
-          <ActivityIndicator color="#fff" size="large" />
-        )}
-      </Pressable>
-      {nfcState.phase === "scanning" && <Text style={styles.hint}>Hold your phone near the entrance tag</Text>}
       {currentlyIn !== null && (
         <Text style={styles.statusText}>{currentlyIn ? "Currently clocked in" : "Currently clocked out"}</Text>
       )}
+      <Image source={require("@/assets/full-ojds-logo.png")} style={styles.logo} resizeMode="contain" />
+      <View
+        style={[
+          styles.glowRing,
+          currentlyIn === true && styles.glowIn,
+          currentlyIn === false && styles.glowOut,
+        ]}
+      >
+        <Pressable
+          style={[styles.tapButton, nfcState.phase === "scanning" && styles.tapButtonBusy]}
+          onPress={handleTap}
+          disabled={nfcState.phase === "scanning"}
+        >
+          {nfcState.phase === "idle" ? (
+            <Text style={styles.tapButtonText}>Tap to{"\n"}Clock In/Out</Text>
+          ) : (
+            <ActivityIndicator color="#fff" size="large" />
+          )}
+        </Pressable>
+      </View>
+      {nfcState.phase === "scanning" && <Text style={styles.hint}>Hold your phone near the entrance tag</Text>}
     </View>
   );
 }
@@ -146,7 +154,32 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0b3b38" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0b3b38", padding: 32 },
   unsupportedText: { color: "#fff", textAlign: "center", fontWeight: "600" },
-  logo: { width: 96, height: 96, marginBottom: 28 },
+  logo: { width: 210, height: 100, marginBottom: 28 },
+  glowRing: {
+    width: 244,
+    height: 244,
+    borderRadius: 122,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glowIn: {
+    borderWidth: 3,
+    borderColor: "rgba(52,211,153,0.7)",
+    shadowColor: "#34d399",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  glowOut: {
+    borderWidth: 3,
+    borderColor: "rgba(249,115,22,0.7)",
+    shadowColor: "#f97316",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 16,
+  },
   tapButton: {
     width: 220,
     height: 220,
@@ -158,5 +191,12 @@ const styles = StyleSheet.create({
   tapButtonBusy: { opacity: 0.7 },
   tapButtonText: { color: "#fff", fontWeight: "800", fontSize: 22, textAlign: "center" },
   hint: { color: "rgba(255,255,255,0.7)", marginTop: 20, fontWeight: "600" },
-  statusText: { color: "rgba(255,255,255,0.8)", marginTop: 24, fontWeight: "700", fontSize: 13 },
+  statusText: {
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 16,
+    fontWeight: "700",
+    fontSize: 13,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
 });

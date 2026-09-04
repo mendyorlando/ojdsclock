@@ -57,7 +57,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/ojds-logo.png",
+          "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#0b3b38"
