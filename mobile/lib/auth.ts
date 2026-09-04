@@ -53,14 +53,30 @@ export async function login(username: string, password: string): Promise<LoginOu
   return { ok: true, user: body.user };
 }
 
+/**
+ * Tells the server to actually delete this session (so a lost/reset phone
+ * can't keep using the same bearer token after "signing out"), then
+ * clears local storage regardless of whether that request succeeded -
+ * the user shouldn't be stuck signed in locally just because the network
+ * was briefly down.
+ */
 export async function logout() {
+  const stored = await getStoredSession();
+  if (stored) {
+    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${stored.sessionId}` },
+    }).catch(() => {});
+  }
   await SecureStore.deleteItemAsync(SESSION_KEY);
   await SecureStore.deleteItemAsync(USER_KEY);
 }
 
 export async function getStoredSession(): Promise<{ sessionId: string; user: CurrentUser } | null> {
-  const sessionId = await SecureStore.getItemAsync(SESSION_KEY);
-  const userJson = await SecureStore.getItemAsync(USER_KEY);
+  const [sessionId, userJson] = await Promise.all([
+    SecureStore.getItemAsync(SESSION_KEY),
+    SecureStore.getItemAsync(USER_KEY),
+  ]);
   if (!sessionId || !userJson) return null;
   return { sessionId, user: JSON.parse(userJson) as CurrentUser };
 }

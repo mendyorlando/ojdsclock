@@ -2,31 +2,27 @@ import { useCallback, useState } from "react";
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { apiFetch } from "@/lib/api";
+import { tagLabel } from "@/lib/config";
 
 type ClockEvent = { id: string; type: "IN" | "OUT"; timestamp: string; tagId: string };
 type HistoryPage = { events: ClockEvent[]; nextCursor: string | null };
-
-const TAG_LABELS: Record<string, string> = {
-  "chabad-door": "Chabad Door",
-  "ojds-door": "OJDS Door",
-  "reminder-confirm": "Confirmed via reminder",
-  "manual-entry": "Manual entry",
-};
-
-function tagLabel(tagId: string) {
-  return TAG_LABELS[tagId] || tagId;
-}
 
 export default function HistoryScreen() {
   const [events, setEvents] = useState<ClockEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(false);
 
   const loadFirstPage = useCallback(async () => {
-    const page = await apiFetch<HistoryPage>("/api/me/history");
-    setEvents(page.events);
-    setCursor(page.nextCursor);
+    try {
+      const page = await apiFetch<HistoryPage>("/api/me/history");
+      setEvents(page.events);
+      setCursor(page.nextCursor);
+      setError(false);
+    } catch {
+      setError(true);
+    }
   }, []);
 
   useFocusEffect(
@@ -38,16 +34,29 @@ export default function HistoryScreen() {
   async function loadMore() {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
-    const page = await apiFetch<HistoryPage>(`/api/me/history?cursor=${cursor}`);
-    setEvents((prev) => [...prev, ...page.events]);
-    setCursor(page.nextCursor);
-    setLoadingMore(false);
+    try {
+      const page = await apiFetch<HistoryPage>(`/api/me/history?cursor=${cursor}`);
+      setEvents((prev) => [...prev, ...page.events]);
+      setCursor(page.nextCursor);
+    } catch {
+      // Leave `cursor` as-is so the next scroll-to-end retries the same page.
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.empty}>Couldn&apos;t load your history. Pull down or reopen this tab to retry.</Text>
       </View>
     );
   }

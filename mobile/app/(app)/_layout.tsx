@@ -7,15 +7,15 @@ export default function AppLayout() {
   if (isLoading) return null;
   if (!user) return <Redirect href="/(auth)/login" />;
 
+  const isAdmin = user.role === "ADMIN";
+
   return (
     <Tabs screenOptions={{ headerShown: true }}>
-      <Tabs.Screen name="tap" options={{ title: "Clock In/Out" }} />
+      {/* Tapping in/out is an employee action - admins get "not_an_employee" from the server anyway. */}
+      <Tabs.Screen name="tap" options={{ title: "Clock In/Out", href: isAdmin ? null : undefined }} />
       <Tabs.Screen name="dashboard" options={{ title: "Hours" }} />
       <Tabs.Screen name="history" options={{ title: "History" }} />
-      <Tabs.Screen
-        name="provision"
-        options={{ title: "Setup Tag", href: user.role === "ADMIN" ? undefined : null }}
-      />
+      <Tabs.Screen name="provision" options={{ title: "Setup Tag", href: isAdmin ? undefined : null }} />
     </Tabs>
   );
 }

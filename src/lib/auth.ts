@@ -31,19 +31,22 @@ export async function createSession(userId: string) {
   return session.id;
 }
 
-export async function getCurrentUser() {
+// The mobile app has no cookie jar shared with the browser, so it
+// authenticates with the same session id sent as a bearer token instead.
+async function resolveSessionToken(): Promise<string | null> {
   const cookieStore = await cookies();
-  let token = cookieStore.get(SESSION_COOKIE)?.value;
+  const cookieToken = cookieStore.get(SESSION_COOKIE)?.value;
+  if (cookieToken) return cookieToken;
 
-  // The mobile app has no cookie jar shared with the browser, so it
-  // authenticates with the same session id sent as a bearer token instead.
-  if (!token) {
-    const authHeader = (await headers()).get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.slice("Bearer ".length).trim();
-    }
+  const authHeader = (await headers()).get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice("Bearer ".length).trim();
   }
+  return null;
+}
 
+export async function getCurrentUser() {
+  const token = await resolveSessionToken();
   if (!token) return null;
 
   const session = await prisma.session.findUnique({
@@ -59,10 +62,10 @@ export async function getCurrentUser() {
 }
 
 export async function destroySession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token = await resolveSessionToken();
   if (token) {
     await prisma.session.deleteMany({ where: { id: token } });
   }
+  const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }

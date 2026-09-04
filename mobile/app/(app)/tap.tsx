@@ -32,6 +32,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   too_far: "You don't seem to be at the school. Please try again once you're there.",
   not_a_nfc_tag: "That doesn't look like the entrance tag. Please try again.",
   read_failed: "Couldn't read the tag. Hold your phone steady over it and try again.",
+  not_an_employee: "Admin accounts can't clock in or out.",
+  unauthenticated: "Please sign in again.",
 };
 
 function formatTime(iso: string) {

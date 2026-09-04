@@ -4,6 +4,7 @@ import { runIsoDepSession, NfcCancelledError } from "@/lib/nfc";
 import { provisionTag, Ntag424AuthError, Ntag424StatusError, Ntag424Error } from "@/lib/ntag424Provision";
 import { hexToBytes } from "@/lib/crypto/aes";
 import { NTAG_KEY_HEX, KNOWN_TAGS, API_BASE_URL } from "@/lib/config";
+import { useAuth } from "@/lib/AuthContext";
 
 const KEY_SLOT = 1;
 
@@ -21,6 +22,7 @@ function initialSteps(): Step[] {
 }
 
 export default function ProvisionScreen() {
+  const { user } = useAuth();
   const [tagIndex, setTagIndex] = useState(0);
   const [steps, setSteps] = useState<Step[]>(initialSteps());
   const [running, setRunning] = useState(false);
@@ -77,6 +79,17 @@ export default function ProvisionScreen() {
     } finally {
       setRunning(false);
     }
+  }
+
+  // The tab bar already hides this screen for non-admins, but that's just
+  // navigation UI - guard the action itself too, since deep links and
+  // router.push can reach any route regardless of which tabs are shown.
+  if (user?.role !== "ADMIN") {
+    return (
+      <View style={styles.screen}>
+        <Text style={styles.subtitle}>Only admin accounts can set up tags.</Text>
+      </View>
+    );
   }
 
   return (

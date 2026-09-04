@@ -27,10 +27,16 @@ export default function DashboardScreen() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await apiFetch<Summary>("/api/me/summary");
-    setSummary(data);
+    try {
+      const data = await apiFetch<Summary>("/api/me/summary");
+      setSummary(data);
+      setError(false);
+    } catch {
+      setError(true);
+    }
   }, []);
 
   useFocusEffect(
@@ -45,10 +51,21 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }
 
-  if (loading || !summary) {
+  if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (error || !summary) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Couldn&apos;t load your hours. Check your connection and try again.</Text>
+        <Pressable style={styles.retryButton} onPress={() => load()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
       </View>
     );
   }
@@ -106,7 +123,10 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f4faf9" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  errorText: { color: "#4b6b68", fontWeight: "600", textAlign: "center", marginBottom: 16 },
+  retryButton: { backgroundColor: "#17ab9d", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
+  retryButtonText: { color: "#fff", fontWeight: "700" },
   content: { padding: 20, paddingBottom: 48 },
   greeting: { fontSize: 22, fontWeight: "800", color: "#0b3b38" },
   status: { fontSize: 13, color: "#4b6b68", marginTop: 4, marginBottom: 20, fontWeight: "600" },
