@@ -13,7 +13,7 @@
       "bundleIdentifier": "org.ojds.clock",
       "appleTeamId": "WN48H47YZX",
       "associatedDomains": ["applinks:ojdsclock.vercel.app"],
-      "buildNumber": "1"
+      "buildNumber": "2"
     },
     "android": {
       "package": "org.ojds.clock",
@@ -33,7 +33,8 @@
         "react-native-nfc-manager",
         {
           "selectIdentifiers": ["D2760000850101"],
-          "nfcPermission": "Allow OJDS Clock to read the entrance tag to clock you in and out."
+          "nfcPermission": "Allow OJDS Clock to read the entrance tag to clock you in and out.",
+          "includeNdefEntitlement": false
         }
       ],
       "expo-secure-store",
