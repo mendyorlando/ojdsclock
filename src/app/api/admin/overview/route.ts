@@ -20,6 +20,7 @@ export async function GET() {
       id: r.user.id,
       name: r.user.name,
       title: r.user.title,
+      payType: r.user.payType,
       currentlyIn: r.currentlyIn,
       streak: r.streak,
       hoursThisWeek: r.hoursThisWeek,

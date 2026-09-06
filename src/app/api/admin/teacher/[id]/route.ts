@@ -16,15 +16,28 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   }
 
   const now = new Date();
-  const [days, streak, year] = await Promise.all([
+  const [days, streak, year, pendingRequests] = await Promise.all([
     computeWeekDays(teacher.id, now),
     computeStreak(teacher.id, now),
     computeYearStats(teacher.id, now),
+    prisma.correctionRequest.findMany({
+      where: { userId: teacher.id, status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   return NextResponse.json({
     name: teacher.name,
+    username: teacher.username,
     title: teacher.title,
+    payType: teacher.payType,
+    hasBoundDevice: teacher.boundDeviceId !== null,
+    pendingRequests: pendingRequests.map((r) => ({
+      id: r.id,
+      requestedStart: r.requestedStart.toISOString(),
+      requestedEnd: r.requestedEnd.toISOString(),
+      reason: r.reason,
+    })),
     days: days.map((d) => ({
       label: d.label,
       date: d.date.toISOString(),

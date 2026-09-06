@@ -95,7 +95,8 @@
       ],
       "./plugins/withSpacePathFix",
       "./plugins/withNdefIntentFilter",
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

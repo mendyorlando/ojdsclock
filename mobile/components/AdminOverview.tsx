@@ -1,12 +1,14 @@
 import { useCallback, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable } from "react-native";
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert } from "react-native";
 import { useFocusEffect, router } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
 import { apiFetch } from "@/lib/api";
 
 type TeacherRow = {
   id: string;
   name: string;
   title: string | null;
+  payType: "HOURLY" | "PER_JOB";
   currentlyIn: boolean;
   streak: number;
   hoursThisWeek: number;
@@ -24,16 +26,19 @@ type Overview = {
   rows: TeacherRow[];
 };
 
+type UploadResult = { created: number; updated: number; skipped: number };
+
 /**
  * What an admin sees instead of the personal "Hours" view (admins don't
  * clock in themselves) - a staff-wide summary plus a roster to drill into
- * any one teacher's hours. Mirrors the website's /admin overview page.
+ * any one teacher's hours. Mirrors the website's /admin page.
  */
 export function AdminOverview() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +62,33 @@ export function AdminOverview() {
     setRefreshing(false);
   }
 
+  async function onUploadRoster() {
+    const picked = await DocumentPicker.getDocumentAsync({
+      type: ["text/csv", "text/comma-separated-values", "public.comma-separated-values-text"],
+      copyToCacheDirectory: true,
+    });
+    if (picked.canceled || !picked.assets?.[0]) return;
+
+    setUploading(true);
+    try {
+      const csv = await fetch(picked.assets[0].uri).then((r) => r.text());
+      const result = await apiFetch<UploadResult>("/api/admin/roster/upload", {
+        method: "POST",
+        body: JSON.stringify({ csv }),
+      });
+      Alert.alert(
+        "Roster updated",
+        `Created ${result.created} new teacher${result.created === 1 ? "" : "s"}. Updated ${result.updated}.` +
+          (result.skipped > 0 ? ` Skipped ${result.skipped} row(s).` : ""),
+      );
+      await load();
+    } catch {
+      Alert.alert("Couldn't upload", "Please check the file and your connection, then try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -76,6 +108,15 @@ export function AdminOverview() {
     );
   }
 
+  const cards = [
+    { label: "Total staff", value: String(overview.totalStaff), color: "#0b3b38" },
+    { label: "Clocked in now", value: String(overview.clockedInNow), color: "#178a52" },
+    { label: "Hours this week", value: String(overview.totalHoursThisWeek), color: "#0b3b38" },
+    { label: "Hours this month", value: String(overview.totalHoursThisMonth), color: "#0b3b38" },
+    { label: "Avg hrs / teacher", value: String(overview.avgHoursThisMonth), color: "#0b3b38" },
+    { label: "Best streak", value: String(overview.topStreak), color: "#c2570a" },
+  ];
+
   return (
     <ScrollView
       style={styles.screen}
@@ -84,26 +125,16 @@ export function AdminOverview() {
     >
       <Text style={styles.greeting}>Staff overview</Text>
       <Text style={styles.status}>
-        {overview.clockedInNow} of {overview.totalStaff} currently clocked in
+        {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
       </Text>
 
-      <View style={styles.statsCard}>
-        <Text style={styles.statsLabel}>This month</Text>
-        <Text style={styles.statsValue}>{overview.totalHoursThisMonth}h</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statsCell}>
-            <Text style={styles.statsCellValue}>{overview.totalHoursThisWeek}</Text>
-            <Text style={styles.statsCellLabel}>Hours this week</Text>
+      <View style={styles.cardsGrid}>
+        {cards.map((c) => (
+          <View key={c.label} style={styles.card}>
+            <Text style={[styles.cardValue, { color: c.color }]}>{c.value}</Text>
+            <Text style={styles.cardLabel}>{c.label}</Text>
           </View>
-          <View style={styles.statsCell}>
-            <Text style={styles.statsCellValue}>{overview.avgHoursThisMonth}</Text>
-            <Text style={styles.statsCellLabel}>Avg per teacher</Text>
-          </View>
-          <View style={styles.statsCell}>
-            <Text style={styles.statsCellValue}>{overview.topStreak}</Text>
-            <Text style={styles.statsCellLabel}>Best streak</Text>
-          </View>
-        </View>
+        ))}
       </View>
 
       <Text style={styles.sectionTitle}>Staff ({overview.totalStaff})</Text>
@@ -116,7 +147,9 @@ export function AdminOverview() {
           <View style={styles.teacherLeft}>
             <Text style={styles.teacherName}>{row.name}</Text>
             <Text style={styles.teacherSub}>
-              {row.hoursThisMonth}h this month{row.streak > 0 ? ` · ${row.streak}-day streak` : ""}
+              {row.payType === "HOURLY" ? "Hourly" : "Job"} · {row.hoursThisWeek}h this week ·{" "}
+              {row.hoursThisMonth}h this month
+              {row.streak > 0 ? ` · ${row.streak}-day streak` : ""}
             </Text>
           </View>
           <View style={[styles.statusPill, row.currentlyIn ? styles.statusIn : styles.statusOut]}>
@@ -126,6 +159,17 @@ export function AdminOverview() {
           </View>
         </Pressable>
       ))}
+
+      <View style={styles.uploadCard}>
+        <Text style={styles.uploadTitle}>Import teacher roster</Text>
+        <Text style={styles.uploadSubtitle}>
+          A CSV with columns: name, username, password, payType (Hourly or Job), and an optional title. Existing
+          usernames are updated, new ones are created.
+        </Text>
+        <Pressable style={styles.uploadButton} onPress={onUploadRoster} disabled={uploading}>
+          {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.uploadButtonText}>Choose CSV file</Text>}
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -139,13 +183,17 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
   greeting: { fontSize: 22, fontWeight: "800", color: "#0b3b38" },
   status: { fontSize: 13, color: "#4b6b68", marginTop: 4, marginBottom: 20, fontWeight: "600" },
-  statsCard: { backgroundColor: "#0f766e", borderRadius: 20, padding: 20, marginBottom: 24 },
-  statsLabel: { color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "700", letterSpacing: 1 },
-  statsValue: { color: "#fff", fontSize: 32, fontWeight: "800", marginTop: 4 },
-  statsRow: { flexDirection: "row", marginTop: 16, gap: 16 },
-  statsCell: { flex: 1 },
-  statsCellValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  statsCellLabel: { color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: "700", marginTop: 2 },
+  cardsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
+  card: {
+    width: "31%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e5efee",
+  },
+  cardValue: { fontSize: 20, fontWeight: "800" },
+  cardLabel: { fontSize: 10, fontWeight: "700", color: "#4b6b68", marginTop: 2 },
   sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0b3b38", marginBottom: 10 },
   teacherCard: {
     backgroundColor: "#fff",
@@ -167,4 +215,16 @@ const styles = StyleSheet.create({
   statusPillText: { fontSize: 12, fontWeight: "800" },
   statusInText: { color: "#178a52" },
   statusOutText: { color: "#4b6b68" },
+  uploadCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#e5efee",
+  },
+  uploadTitle: { fontWeight: "800", color: "#0b3b38", fontSize: 14 },
+  uploadSubtitle: { color: "#4b6b68", fontSize: 12, marginTop: 4, marginBottom: 12, fontWeight: "600" },
+  uploadButton: { backgroundColor: "#17ab9d", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
+  uploadButtonText: { color: "#fff", fontWeight: "700" },
 });

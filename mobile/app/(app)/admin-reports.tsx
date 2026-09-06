@@ -1,20 +1,25 @@
 import { useCallback, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
 import { getStoredSession } from "@/lib/auth";
 
-type ReportRow = { id: string; name: string; payType: "HOURLY" | "JOB"; daysWorked: number; hours: number };
+type ReportRow = { id: string; name: string; payType: "HOURLY" | "PER_JOB"; daysWorked: number; hours: number };
 type Report = { from: string; to: string; totalHours: number; rows: ReportRow[] };
 
 function toDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-const RANGES = [
+function formatDateLabel(d: Date) {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+const PRESETS = [
   {
     label: "This week",
     range: () => {
@@ -47,14 +52,21 @@ const RANGES = [
 /** Admin-only: hours-by-teacher over a date range, plus CSV export via the share sheet. */
 export default function AdminReportsScreen() {
   const [rangeIndex, setRangeIndex] = useState(1); // "This month", matches the website's default
+  const [customFrom, setCustomFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [customTo, setCustomTo] = useState(() => new Date());
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const isCustom = rangeIndex === PRESETS.length;
+  const activeRange = isCustom ? { from: customFrom, to: customTo } : PRESETS[rangeIndex].range();
+
   const load = useCallback(async () => {
-    const { from, to } = RANGES[rangeIndex].range();
+    const { from, to } = activeRange;
     try {
       const data = await apiFetch<Report>(`/api/admin/reports?from=${toDateInput(from)}&to=${toDateInput(to)}`);
       setReport(data);
@@ -63,7 +75,7 @@ export default function AdminReportsScreen() {
       setError(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeIndex]);
+  }, [activeRange.from.getTime(), activeRange.to.getTime()]);
 
   useFocusEffect(
     useCallback(() => {
@@ -76,6 +88,34 @@ export default function AdminReportsScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  }
+
+  function pickFromDate() {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: customFrom,
+        mode: "date",
+        onChange: (_e, date) => {
+          if (date) setCustomFrom(date);
+        },
+      });
+    } else {
+      setShowFromPicker(true);
+    }
+  }
+
+  function pickToDate() {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: customTo,
+        mode: "date",
+        onChange: (_e, date) => {
+          if (date) setCustomTo(date);
+        },
+      });
+    } else {
+      setShowToPicker(true);
+    }
   }
 
   async function onExport() {
@@ -128,7 +168,7 @@ export default function AdminReportsScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
     >
       <View style={styles.rangeRow}>
-        {RANGES.map((r, i) => (
+        {PRESETS.map((r, i) => (
           <Pressable
             key={r.label}
             style={[styles.rangeChip, i === rangeIndex && styles.rangeChipActive]}
@@ -137,7 +177,49 @@ export default function AdminReportsScreen() {
             <Text style={[styles.rangeChipText, i === rangeIndex && styles.rangeChipTextActive]}>{r.label}</Text>
           </Pressable>
         ))}
+        <Pressable
+          style={[styles.rangeChip, isCustom && styles.rangeChipActive]}
+          onPress={() => setRangeIndex(PRESETS.length)}
+        >
+          <Text style={[styles.rangeChipText, isCustom && styles.rangeChipTextActive]}>Custom</Text>
+        </Pressable>
       </View>
+
+      {isCustom && (
+        <View style={styles.customRow}>
+          <Pressable style={styles.dateField} onPress={pickFromDate}>
+            <Text style={styles.dateFieldLabel}>From</Text>
+            <Text style={styles.dateFieldValue}>{formatDateLabel(customFrom)}</Text>
+          </Pressable>
+          <Pressable style={styles.dateField} onPress={pickToDate}>
+            <Text style={styles.dateFieldLabel}>To</Text>
+            <Text style={styles.dateFieldValue}>{formatDateLabel(customTo)}</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {Platform.OS === "ios" && showFromPicker && (
+        <DateTimePicker
+          value={customFrom}
+          mode="date"
+          display="spinner"
+          onChange={(_e, date) => {
+            setShowFromPicker(false);
+            if (date) setCustomFrom(date);
+          }}
+        />
+      )}
+      {Platform.OS === "ios" && showToPicker && (
+        <DateTimePicker
+          value={customTo}
+          mode="date"
+          display="spinner"
+          onChange={(_e, date) => {
+            setShowToPicker(false);
+            if (date) setCustomTo(date);
+          }}
+        />
+      )}
 
       <View style={styles.statsCard}>
         <Text style={styles.statsLabel}>Total hours</Text>
@@ -186,6 +268,17 @@ const styles = StyleSheet.create({
   rangeChipActive: { backgroundColor: "#0f766e", borderColor: "#0f766e" },
   rangeChipText: { fontWeight: "700", color: "#4b6b68", fontSize: 13 },
   rangeChipTextActive: { color: "#fff" },
+  customRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  dateField: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#d5e5e3",
+  },
+  dateFieldLabel: { fontSize: 10, fontWeight: "700", color: "#4b6b68", letterSpacing: 0.5, textTransform: "uppercase" },
+  dateFieldValue: { fontSize: 14, fontWeight: "700", color: "#0b3b38", marginTop: 4 },
   statsCard: { backgroundColor: "#0f766e", borderRadius: 20, padding: 20, marginBottom: 16 },
   statsLabel: { color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   statsValue: { color: "#fff", fontSize: 32, fontWeight: "800", marginTop: 4 },

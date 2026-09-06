@@ -13,8 +13,23 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   const { id } = await context.params;
   const cursor = req.nextUrl.searchParams.get("cursor");
 
+  // Optional date-range filter, matching the website's teacher-detail
+  // "Filter" form - unfiltered (all history, paginated) when omitted.
+  const fromParam = req.nextUrl.searchParams.get("from");
+  const toParam = req.nextUrl.searchParams.get("to");
+  const from = fromParam ? new Date(`${fromParam}T00:00:00`) : null;
+  const to = toParam ? new Date(`${toParam}T00:00:00`) : null;
+  if (to) to.setDate(to.getDate() + 1); // make the "to" date inclusive
+
+  const timestampFilter: { gte?: Date; lt?: Date } = {};
+  if (from && !Number.isNaN(from.getTime())) timestampFilter.gte = from;
+  if (to && !Number.isNaN(to.getTime())) timestampFilter.lt = to;
+
   const events = await prisma.clockEvent.findMany({
-    where: { userId: id },
+    where: {
+      userId: id,
+      ...(Object.keys(timestampFilter).length > 0 ? { timestamp: timestampFilter } : {}),
+    },
     orderBy: [{ timestamp: "desc" }, { id: "desc" }],
     take: PAGE_SIZE + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
