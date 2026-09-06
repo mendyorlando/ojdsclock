@@ -94,7 +94,8 @@
         }
       ],
       "./plugins/withSpacePathFix",
-      "./plugins/withNdefIntentFilter"
+      "./plugins/withNdefIntentFilter",
+      "expo-sharing"
     ],
     "extra": {
       "router": {},

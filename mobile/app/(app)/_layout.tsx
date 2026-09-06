@@ -43,6 +43,10 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="admin-reports"
+        options={{ title: "Reports", href: isAdmin ? undefined : null, tabBarIcon: tabIcon("bar-chart-outline") }}
+      />
+      <Tabs.Screen
         name="provision"
         options={{ title: "Setup Tag", href: isAdmin ? undefined : null, tabBarIcon: tabIcon("construct-outline") }}
       />
