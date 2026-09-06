@@ -99,8 +99,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "704ab6e4-62b3-4dfe-a5d7-cd97e95"
+        "projectId": "f199c8f1-cd59-40c7-ac71-522127d3e57a"
       }
-    }
+    },
+    "owner": "chabadwg"
   }
 }
