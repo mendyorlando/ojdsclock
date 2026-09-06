@@ -4,6 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { enableGeofence, disableGeofence, isGeofenceEnabled } from "@/lib/geofence";
+import { AdminOverview } from "@/components/AdminOverview";
 
 type DaySummary = {
   label: string;
@@ -23,7 +24,17 @@ type Summary = {
   currentlyIn: boolean;
 };
 
+// Admins don't clock in themselves, so this personal hours view doesn't
+// apply to them - they get the staff-wide overview instead. Split into
+// two components (rather than an early-return inside one) so neither
+// branch ever conditionally skips a hook.
 export default function DashboardScreen() {
+  const { user } = useAuth();
+  if (user?.role === "ADMIN") return <AdminOverview />;
+  return <TeacherDashboard />;
+}
+
+function TeacherDashboard() {
   const { user, signOut } = useAuth();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);

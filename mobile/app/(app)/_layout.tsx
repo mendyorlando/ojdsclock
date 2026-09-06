@@ -24,8 +24,16 @@ export default function AppLayout() {
         name="tap"
         options={{ title: "Clock In/Out", href: isAdmin ? null : undefined, tabBarIcon: tabIcon("time-outline") }}
       />
-      <Tabs.Screen name="dashboard" options={{ title: "Hours", tabBarIcon: tabIcon("reader-outline") }} />
-      <Tabs.Screen name="history" options={{ title: "History", tabBarIcon: tabIcon("calendar-outline") }} />
+      <Tabs.Screen
+        name="dashboard"
+        options={{ title: isAdmin ? "Overview" : "Hours", tabBarIcon: tabIcon("reader-outline") }}
+      />
+      {/* Personal clock history doesn't apply to admins - they drill into
+          any teacher's history from the Overview tab instead. */}
+      <Tabs.Screen
+        name="history"
+        options={{ title: "History", href: isAdmin ? null : undefined, tabBarIcon: tabIcon("calendar-outline") }}
+      />
       <Tabs.Screen
         name="admin-requests"
         options={{

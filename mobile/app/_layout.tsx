@@ -49,6 +49,7 @@ export default function RootLayout() {
         <Stack.Screen name="(app)" />
         <Stack.Screen name="c/[tag]" />
         <Stack.Screen name="geofence-confirm" />
+        <Stack.Screen name="admin-teacher/[id]" options={{ headerShown: true }} />
       </Stack>
     </AuthProvider>
   );
