@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { File, Paths } from "expo-file-system";
@@ -63,7 +63,15 @@ export default function AdminReportsScreen() {
   const [exporting, setExporting] = useState(false);
 
   const isCustom = rangeIndex === PRESETS.length;
-  const activeRange = isCustom ? { from: customFrom, to: customTo } : PRESETS[rangeIndex].range();
+  // Memoized so this only recomputes when the actual selection changes -
+  // PRESETS[i].range() captures `new Date()` as "to", so recomputing it on
+  // every render (it's not memoized otherwise) makes the value drift by a
+  // few ms each time, which kept `load` looking "new" to useFocusEffect
+  // below and retriggered it in an infinite loop.
+  const activeRange = useMemo(
+    () => (isCustom ? { from: customFrom, to: customTo } : PRESETS[rangeIndex].range()),
+    [isCustom, rangeIndex, customFrom, customTo],
+  );
 
   const load = useCallback(async () => {
     const { from, to } = activeRange;
