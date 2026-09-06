@@ -51,6 +51,7 @@ model User {
   pushSubscriptions  PushSubscription[]
   correctionRequests CorrectionRequest[]
   deviceRequests     DeviceRequest[]
+  expoPushTokens     ExpoPushToken[]
 }
 
 model ClockEvent {
@@ -80,6 +81,18 @@ model PushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
+  createdAt DateTime @default(now())
+}
+
+// A device token for Expo's push notification service - distinct from
+// PushSubscription (web-push/VAPID, used by the browser PWA's long-shift
+// reminder), since the mobile app's native push channel needs Expo's own
+// token format instead.
+model ExpoPushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
   createdAt DateTime @default(now())
 }
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth";
 import { formatDeviceLabel } from "@/lib/device";
+import { notifyAdminsOfDeviceRequest } from "@/lib/expoPush";
 import type { User } from "@prisma/client";
 
 export type LoginResult = { ok: true; user: User } | { ok: false; reason: "invalid" | "device_pending" };
@@ -47,9 +48,14 @@ export async function attemptLogin(
         where: { userId: user.id, deviceId, status: "PENDING" },
       });
       if (!alreadyPending) {
+        const deviceLabel = formatDeviceLabel(userAgent);
         await prisma.deviceRequest.create({
-          data: { userId: user.id, deviceId, deviceLabel: formatDeviceLabel(userAgent) },
+          data: { userId: user.id, deviceId, deviceLabel },
         });
+        // Awaited (not fire-and-forget) since a serverless function can be
+        // frozen the moment its response is sent, before an un-awaited
+        // promise gets to finish.
+        await notifyAdminsOfDeviceRequest(user.name, deviceLabel).catch(() => {});
       }
       return { ok: false, reason: "device_pending" };
     }

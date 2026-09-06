@@ -12,7 +12,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "org.ojds.clock",
       "appleTeamId": "WN48H47YZX",
-      "associatedDomains": ["applinks:ojdsclock.vercel.app"],
+      "associatedDomains": [
+        "applinks:ojdsclock.vercel.app"
+      ],
       "buildNumber": "2"
     },
     "android": {
@@ -34,8 +36,19 @@
               "pathPrefix": "/c/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
+      ],
+      "permissions": [
+        "android.permission.NFC",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -45,7 +58,9 @@
       [
         "react-native-nfc-manager",
         {
-          "selectIdentifiers": ["D2760000850101"],
+          "selectIdentifiers": [
+            "D2760000850101"
+          ],
           "nfcPermission": "Allow OJDS Clock to read the entrance tag to clock you in and out.",
           "includeNdefEntitlement": false
         }
@@ -80,6 +95,12 @@
       ],
       "./plugins/withSpacePathFix",
       "./plugins/withNdefIntentFilter"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "704ab6e4-62b3-4dfe-a5d7-cd97e95"
+      }
+    }
   }
 }

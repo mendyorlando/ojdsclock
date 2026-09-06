@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { notifyAdminsOfCorrectionRequest } from "@/lib/expoPush";
 
 export async function submitCorrectionRequest(formData: FormData) {
   const user = await getCurrentUser();
@@ -20,6 +21,7 @@ export async function submitCorrectionRequest(formData: FormData) {
     await prisma.correctionRequest.create({
       data: { userId: user.id, requestedStart: start, requestedEnd: end, reason },
     });
+    await notifyAdminsOfCorrectionRequest(user.name).catch(() => {});
   }
 
   redirect("/dashboard/request?submitted=1");

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { getStoredSession, logout as logoutStorage, onSessionInvalidated, type CurrentUser } from "./auth";
+import { registerForAdminPushNotifications } from "./pushNotifications";
 
 type AuthState = {
   user: CurrentUser | null;
@@ -24,6 +25,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   useEffect(() => onSessionInvalidated(() => setUser(null)), []);
+
+  useEffect(() => {
+    if (user?.role === "ADMIN") registerForAdminPushNotifications().catch(() => {});
+  }, [user]);
 
   const signOut = useCallback(async () => {
     await logoutStorage();
