@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert, Platform } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
@@ -58,9 +58,14 @@ export default function AdminReportsScreen() {
   const [showToPicker, setShowToPicker] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  // Separate from `loading`: true only while re-fetching after the range
+  // changes (or on refocus) when we already have a report on screen, so
+  // switching ranges doesn't blank the whole screen back to a spinner.
+  const [rangeLoading, setRangeLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
   const isCustom = rangeIndex === PRESETS.length;
   // Memoized so this only recomputes when the actual selection changes -
@@ -87,8 +92,15 @@ export default function AdminReportsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      load().finally(() => setLoading(false));
+      if (!hasLoadedOnce.current) {
+        load().finally(() => {
+          setLoading(false);
+          hasLoadedOnce.current = true;
+        });
+      } else {
+        setRangeLoading(true);
+        load().finally(() => setRangeLoading(false));
+      }
     }, [load]),
   );
 
@@ -191,6 +203,7 @@ export default function AdminReportsScreen() {
         >
           <Text style={[styles.rangeChipText, isCustom && styles.rangeChipTextActive]}>Custom</Text>
         </Pressable>
+        {rangeLoading && <ActivityIndicator style={styles.rangeLoadingSpinner} />}
       </View>
 
       {isCustom && (
@@ -229,7 +242,7 @@ export default function AdminReportsScreen() {
         />
       )}
 
-      <View style={styles.statsCard}>
+      <View style={[styles.statsCard, rangeLoading && styles.statsCardLoading]}>
         <Text style={styles.statsLabel}>Total hours</Text>
         <Text style={styles.statsValue}>{report.totalHours}h</Text>
         <Text style={styles.statsSubtext}>
@@ -242,17 +255,23 @@ export default function AdminReportsScreen() {
       </Pressable>
 
       <Text style={styles.sectionTitle}>By teacher</Text>
-      {report.rows.map((row) => (
-        <View key={row.id} style={styles.row}>
-          <View style={styles.rowLeft}>
-            <Text style={styles.rowName}>{row.name}</Text>
-            <Text style={styles.rowSub}>
-              {row.payType === "HOURLY" ? "Hourly" : "Job"} · {row.daysWorked} day{row.daysWorked === 1 ? "" : "s"}
-            </Text>
-          </View>
-          <Text style={styles.rowHours}>{row.hours}h</Text>
-        </View>
-      ))}
+      <View style={rangeLoading && styles.statsCardLoading}>
+        {report.rows.map((row) => (
+          <Pressable
+            key={row.id}
+            style={styles.row}
+            onPress={() => router.push({ pathname: "/admin-teacher/[id]", params: { id: row.id } })}
+          >
+            <View style={styles.rowLeft}>
+              <Text style={styles.rowName}>{row.name}</Text>
+              <Text style={styles.rowSub}>
+                {row.payType === "HOURLY" ? "Hourly" : "Job"} · {row.daysWorked} day{row.daysWorked === 1 ? "" : "s"}
+              </Text>
+            </View>
+            <Text style={styles.rowHours}>{row.hours}h</Text>
+          </Pressable>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -264,7 +283,8 @@ const styles = StyleSheet.create({
   retryButton: { backgroundColor: "#17ab9d", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   retryButtonText: { color: "#fff", fontWeight: "700" },
   content: { padding: 20, paddingBottom: 48 },
-  rangeRow: { flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" },
+  rangeRow: { flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" },
+  rangeLoadingSpinner: { marginLeft: 4 },
   rangeChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -288,6 +308,7 @@ const styles = StyleSheet.create({
   dateFieldLabel: { fontSize: 10, fontWeight: "700", color: "#4b6b68", letterSpacing: 0.5, textTransform: "uppercase" },
   dateFieldValue: { fontSize: 14, fontWeight: "700", color: "#0b3b38", marginTop: 4 },
   statsCard: { backgroundColor: "#0f766e", borderRadius: 20, padding: 20, marginBottom: 16 },
+  statsCardLoading: { opacity: 0.5 },
   statsLabel: { color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   statsValue: { color: "#fff", fontSize: 32, fontWeight: "800", marginTop: 4 },
   statsSubtext: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "600", marginTop: 8 },

@@ -213,20 +213,26 @@ export default function AdminTeacherScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
+      <>
+        <Stack.Screen options={{ title: "Teacher", headerBackTitle: "Overview" }} />
+        <View style={styles.center}>
+          <ActivityIndicator />
+        </View>
+      </>
     );
   }
 
   if (error || !summary) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Couldn&apos;t load this teacher&apos;s hours. Check your connection and try again.</Text>
-        <Pressable style={styles.retryButton} onPress={() => load()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </Pressable>
-      </View>
+      <>
+        <Stack.Screen options={{ title: "Teacher", headerBackTitle: "Overview" }} />
+        <View style={styles.center}>
+          <Text style={styles.errorText}>Couldn&apos;t load this teacher&apos;s hours. Check your connection and try again.</Text>
+          <Pressable style={styles.retryButton} onPress={() => load()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </Pressable>
+        </View>
+      </>
     );
   }
 
