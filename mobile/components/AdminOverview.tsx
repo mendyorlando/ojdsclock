@@ -3,6 +3,7 @@ import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, 
 import { useFocusEffect, router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 
 type TeacherRow = {
   id: string;
@@ -34,6 +35,7 @@ type UploadResult = { created: number; updated: number; skipped: number };
  * any one teacher's hours. Mirrors the website's /admin page.
  */
 export function AdminOverview() {
+  const { signOut } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -175,6 +177,10 @@ export function AdminOverview() {
           {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.uploadButtonText}>Choose CSV file</Text>}
         </Pressable>
       </View>
+
+      <Pressable style={styles.signOut} onPress={signOut}>
+        <Text style={styles.signOutText}>Sign out</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -244,4 +250,6 @@ const styles = StyleSheet.create({
   uploadSubtitle: { color: "#4b6b68", fontSize: 12, marginTop: 4, marginBottom: 12, fontWeight: "600" },
   uploadButton: { backgroundColor: "#17ab9d", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
   uploadButtonText: { color: "#fff", fontWeight: "700" },
+  signOut: { marginTop: 32, alignItems: "center" },
+  signOutText: { color: "#b5443a", fontWeight: "700" },
 });
