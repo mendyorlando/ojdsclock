@@ -15,7 +15,7 @@
       "associatedDomains": [
         "applinks:ojdsclock.vercel.app"
       ],
-      "buildNumber": "4"
+      "buildNumber": "5"
     },
     "android": {
       "package": "org.ojds.clock",

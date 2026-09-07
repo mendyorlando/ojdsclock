@@ -67,7 +67,10 @@ function TeacherDashboard() {
         if (result === "ok") {
           setGeofenceOn(true);
         } else if (result === "no_session") {
-          Alert.alert("Please sign in again", "Something went wrong. Please sign out and back in, then try again.");
+          // Not necessarily an invalid session (that case already redirects
+          // to login on its own) - just as likely a network hiccup while
+          // fetching school info, so this shouldn't tell them to sign out.
+          Alert.alert("Couldn't turn that on", "Please check your connection and try again.");
         } else {
           Alert.alert(
             "Location permission needed",

@@ -146,6 +146,14 @@ export async function ensureSchoolLoaded(): Promise<{ sessionId: string; user: C
     const res = await fetch(`${API_BASE_URL}/api/me`, {
       headers: { Authorization: `Bearer ${stored.sessionId}` },
     });
+    // A 401 means the server has already decided this session doesn't
+    // exist - same handling apiFetch() does for every other authenticated
+    // call, just inlined here since this runs before AuthContext exists to
+    // route through apiFetch's normal 401 path.
+    if (res.status === 401) {
+      await clearLocalSession();
+      return null;
+    }
     if (!res.ok) return stored;
     const fresh = (await res.json()) as CurrentUser;
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(fresh));
