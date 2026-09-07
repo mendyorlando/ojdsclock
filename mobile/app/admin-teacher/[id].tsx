@@ -15,6 +15,7 @@ import { useLocalSearchParams, useFocusEffect, router, Stack } from "expo-router
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { apiFetch } from "@/lib/api";
 import { tagLabel } from "@/lib/config";
+import { toDateInput } from "@/lib/dates";
 
 type PendingRequest = { id: string; requestedStart: string; requestedEnd: string; reason: string };
 
@@ -38,10 +39,6 @@ type TeacherSummary = {
 
 type ClockEvent = { id: string; type: "IN" | "OUT"; timestamp: string; tagId: string };
 type HistoryPage = { events: ClockEvent[]; nextCursor: string | null };
-
-function toDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function toTimeInput(d: Date) {
   return d.toTimeString().slice(0, 5);

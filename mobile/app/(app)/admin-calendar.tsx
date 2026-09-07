@@ -15,14 +15,11 @@ import { useFocusEffect } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { apiFetch } from "@/lib/api";
+import { toDateInput } from "@/lib/dates";
 
 type Closure = { id: string; date: string; label: string | null };
 type CalendarData = { upcoming: Closure[]; past: Closure[] };
 type UploadResult = { added: number; skipped: number };
-
-function toDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function formatClosureDate(dateStr: string) {
   const d = new Date(`${dateStr}T00:00:00`);

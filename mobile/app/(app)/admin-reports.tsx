@@ -7,13 +7,10 @@ import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/d
 import { apiFetch, ApiError } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
 import { getStoredSession } from "@/lib/auth";
+import { toDateInput } from "@/lib/dates";
 
 type ReportRow = { id: string; name: string; payType: "HOURLY" | "PER_JOB"; daysWorked: number; hours: number };
 type Report = { from: string; to: string; totalHours: number; rows: ReportRow[] };
-
-function toDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 function formatDateLabel(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
