@@ -100,6 +100,7 @@
         }
       ],
       "./plugins/withSpacePathFix",
+      "./plugins/withUpdatesSpacePathFix",
       "./plugins/withNdefIntentFilter",
       "expo-sharing",
       "@react-native-community/datetimepicker"
