@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { View, Text, Image, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Switch, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { enableGeofence, disableGeofence, isGeofenceEnabled } from "@/lib/geofence";
@@ -126,8 +127,8 @@ function TeacherDashboard() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
     >
-      <View style={styles.hero}>
-        <Image source={require("@/assets/ojds-logo.png")} style={styles.heroLogo} resizeMode="contain" />
+      <LinearGradient colors={["#17ab9d", "#0f766e"]} style={styles.hero}>
+        <Image source={require("@/assets/full-ojds-logo.png")} style={styles.heroLogo} resizeMode="contain" />
         <Text style={styles.greeting}>
           {timeOfDayGreeting()}, {user?.name.split(" ")[0]}
         </Text>
@@ -141,7 +142,7 @@ function TeacherDashboard() {
             {summary.currentlyIn ? "Currently clocked in" : "Not clocked in right now"}
           </Text>
         </View>
-      </View>
+      </LinearGradient>
 
       <View style={styles.statsCard}>
         <Text style={styles.statsLabel}>This month</Text>
@@ -221,14 +222,13 @@ const styles = StyleSheet.create({
   retryButtonText: { color: "#fff", fontWeight: "700" },
   content: { padding: 20, paddingBottom: 48 },
   hero: {
-    backgroundColor: "#0b3b38",
     borderRadius: 24,
     paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: "center",
     marginBottom: 20,
   },
-  heroLogo: { width: 48, height: 48, marginBottom: 12 },
+  heroLogo: { width: 190, height: 90, marginBottom: 12 },
   greeting: { fontSize: 22, fontWeight: "800", color: "#fff", textAlign: "center" },
   statusPill: {
     flexDirection: "row",

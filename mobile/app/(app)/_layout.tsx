@@ -1,6 +1,7 @@
-import type { ColorValue } from "react-native";
+import { Platform, type ColorValue } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/AuthContext";
 
 function tabIcon(name: keyof typeof Ionicons.glyphMap) {
@@ -11,14 +12,21 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (isLoading) return null;
   if (!user) return <Redirect href="/(auth)/login" />;
 
   const isAdmin = user.role === "ADMIN";
 
+  // Android's default tab bar sits right against the gesture/nav bar with
+  // little breathing room, unlike iOS which already reserves space for the
+  // home indicator - give it some extra bottom padding to match.
+  const tabBarStyle =
+    Platform.OS === "android" ? { height: 56 + insets.bottom + 12, paddingBottom: insets.bottom + 12 } : undefined;
+
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
+    <Tabs screenOptions={{ headerShown: true, tabBarStyle }}>
       {/* Tapping in/out is an employee action - admins get "not_an_employee" from the server anyway. */}
       <Tabs.Screen
         name="tap"
