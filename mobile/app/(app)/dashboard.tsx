@@ -173,6 +173,15 @@ function TeacherDashboard() {
         </Text>
       </View>
 
+      {summary.daysThisYear === 0 && (
+        <View style={styles.welcomeCard}>
+          <Ionicons name="hand-left-outline" size={22} color="#0f766e" />
+          <Text style={styles.welcomeText}>
+            Welcome to OJDS Clock! Tap your phone on the entrance tag to log your first hours.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.weekCard}>
         <Text style={styles.weekTitle}>This week</Text>
         {summary.days.map((day) => (
@@ -256,6 +265,16 @@ const styles = StyleSheet.create({
   streakCardActive: { backgroundColor: "#fff3e8", borderColor: "#fbd9b5" },
   streakText: { fontWeight: "700", color: "#4b6b68", fontSize: 14 },
   streakTextActive: { fontWeight: "800", color: "#0b3b38" },
+  welcomeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#e6f4f2",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  welcomeText: { flex: 1, color: "#0b3b38", fontWeight: "600", fontSize: 13, lineHeight: 18 },
   weekCard: { backgroundColor: "#fff", borderRadius: 20, padding: 16, borderWidth: 1, borderColor: "#e5efee" },
   weekTitle: { fontWeight: "800", color: "#0b3b38", marginBottom: 10 },
   dayRow: {

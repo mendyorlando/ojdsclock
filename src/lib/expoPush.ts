@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/prisma";
 
-type PushPayload = { title: string; body: string; data?: Record<string, unknown> };
+type PushPayload = { title: string; body: string; data?: Record<string, unknown>; badge?: number };
+
+async function countPendingRequests() {
+  const [devicePending, correctionPending] = await Promise.all([
+    prisma.deviceRequest.count({ where: { status: "PENDING" } }),
+    prisma.correctionRequest.count({ where: { status: "PENDING" } }),
+  ]);
+  return devicePending + correctionPending;
+}
 
 /**
  * Pushes to every admin's mobile device via Expo's push service - distinct
@@ -18,6 +26,7 @@ async function sendToAdmins(payload: PushPayload) {
     title: payload.title,
     body: payload.body,
     data: payload.data,
+    badge: payload.badge,
   }));
 
   let tickets: Array<{ status: string; details?: { error?: string } }> = [];
@@ -46,17 +55,21 @@ async function sendToAdmins(payload: PushPayload) {
 }
 
 export async function notifyAdminsOfDeviceRequest(userName: string, deviceLabel: string | null) {
+  const badge = await countPendingRequests();
   await sendToAdmins({
     title: "Device sign-in request",
     body: `${userName} tried to sign in from ${deviceLabel || "an unrecognized device"}.`,
     data: { url: "/admin-requests" },
+    badge,
   });
 }
 
 export async function notifyAdminsOfCorrectionRequest(userName: string) {
+  const badge = await countPendingRequests();
   await sendToAdmins({
     title: "Hour correction request",
     body: `${userName} submitted an hour correction request.`,
     data: { url: "/admin-requests" },
+    badge,
   });
 }

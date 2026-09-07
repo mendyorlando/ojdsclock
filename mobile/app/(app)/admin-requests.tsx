@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
+import * as Notifications from "expo-notifications";
 import { apiFetch } from "@/lib/api";
 
 type DeviceRequest = { id: string; userId: string; userName: string; deviceLabel: string | null; createdAt: string };
@@ -61,6 +62,10 @@ export default function AdminRequestsScreen() {
       setCorrectionPending(requests.pending);
       setCorrectionResolved(requests.resolved);
       setError(false);
+      // Keep the app icon badge in sync with what's actually still
+      // pending, so resolving requests here clears it immediately
+      // instead of waiting for the next push to recompute it.
+      Notifications.setBadgeCountAsync(devices.pending.length + requests.pending.length).catch(() => {});
     } catch {
       setError(true);
     }

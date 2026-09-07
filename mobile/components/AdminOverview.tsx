@@ -137,6 +137,11 @@ export function AdminOverview() {
         ))}
       </View>
 
+      <Pressable style={styles.whosInButton} onPress={() => router.push("/admin-whos-in")}>
+        <Text style={styles.whosInButtonText}>See who&apos;s in the building</Text>
+        <Text style={styles.whosInButtonArrow}>›</Text>
+      </Pressable>
+
       <Text style={styles.sectionTitle}>Staff ({overview.totalStaff})</Text>
       {overview.rows.map((row) => (
         <Pressable
@@ -194,6 +199,18 @@ const styles = StyleSheet.create({
   },
   cardValue: { fontSize: 20, fontWeight: "800" },
   cardLabel: { fontSize: 10, fontWeight: "700", color: "#4b6b68", marginTop: 2 },
+  whosInButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#0f766e",
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  whosInButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  whosInButtonArrow: { color: "#fff", fontWeight: "800", fontSize: 20 },
   sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0b3b38", marginBottom: 10 },
   teacherCard: {
     backgroundColor: "#fff",

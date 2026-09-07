@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, Image, Pressable, ActivityIndicator, StyleSheet, AppState } from "react-native";
+import { View, Text, Image, Pressable, ActivityIndicator, StyleSheet, AppState, Animated } from "react-native";
 import { useFocusEffect, useIsFocused } from "expo-router";
 import NfcManager from "react-native-nfc-manager";
 import { scanEntranceTag, NfcCancelledError, NfcInvalidTagError } from "@/lib/nfc";
@@ -16,6 +16,18 @@ export default function TapScreen() {
   const { state, submit, reset, setError } = useTapSubmission();
   const isFocused = useIsFocused();
   const [currentlyIn, setCurrentlyIn] = useState<boolean | null>(null);
+  const pulseAnim = useRef(new Animated.Value(0.55)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1100, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.55, duration: 1100, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,13 +138,17 @@ export default function TapScreen() {
         <Text style={styles.statusText}>{currentlyIn ? "Currently clocked in" : "Currently clocked out"}</Text>
       )}
       <Image source={require("@/assets/full-ojds-logo.png")} style={styles.logo} resizeMode="contain" />
-      <View
-        style={[
-          styles.glowRing,
-          currentlyIn === true && styles.glowIn,
-          currentlyIn === false && styles.glowOut,
-        ]}
-      >
+      <View style={styles.glowRing}>
+        {currentlyIn !== null && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.pulseRing,
+              currentlyIn ? styles.glowIn : styles.glowOut,
+              { opacity: pulseAnim },
+            ]}
+          />
+        )}
         <Pressable
           style={[styles.tapButton, nfcState.phase === "scanning" && styles.tapButtonBusy]}
           onPress={handleTap}
@@ -161,6 +177,16 @@ const styles = StyleSheet.create({
     borderRadius: 122,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Absolutely positioned behind the button so only this layer's opacity
+  // pulses - the button and its text stay fully visible and steady.
+  pulseRing: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 244,
+    height: 244,
+    borderRadius: 122,
   },
   glowIn: {
     borderWidth: 3,

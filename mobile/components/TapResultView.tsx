@@ -1,8 +1,26 @@
-import { View, Text, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { useEffect, useRef } from "react";
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, Animated } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { SubmissionState } from "@/lib/useTapSubmission";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+/** A bigger, bouncier moment than the everyday streak text - milestones are rare, so they should feel like it. */
+function MilestoneCard({ days }: { days: number }) {
+  const scale = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }).start();
+  }, [scale]);
+
+  return (
+    <Animated.View style={[styles.milestoneCard, { transform: [{ scale }] }]}>
+      <Ionicons name="trophy" size={26} color="#fff" />
+      <Text style={styles.milestoneText}>{days}-day streak!</Text>
+    </Animated.View>
+  );
 }
 
 export function TapResultView({
@@ -55,11 +73,7 @@ export function TapResultView({
         {isIn ? "Clocked in" : "Clocked out"} at {formatTime(data.timestamp)}
       </Text>
 
-      {isIn && data.milestone && (
-        <View style={styles.milestoneCard}>
-          <Text style={styles.milestoneText}>{data.milestone}-day streak!</Text>
-        </View>
-      )}
+      {isIn && data.milestone && <MilestoneCard days={data.milestone} />}
       {isIn && !data.milestone && data.streak !== null && data.streak > 0 && (
         <Text style={styles.streakText}>{data.streak}-day streak</Text>
       )}
@@ -86,13 +100,18 @@ const styles = StyleSheet.create({
   resultTitle: { color: "#fff", fontSize: 24, fontWeight: "800", textAlign: "center" },
   resultSubtitle: { color: "rgba(255,255,255,0.6)", marginTop: 8, fontWeight: "600" },
   milestoneCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     backgroundColor: "#d9782a",
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginTop: 20,
+    borderRadius: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    marginTop: 22,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  milestoneText: { color: "#fff", fontWeight: "800" },
+  milestoneText: { color: "#fff", fontWeight: "800", fontSize: 17 },
   streakText: { color: "#ffb066", fontWeight: "700", marginTop: 16 },
   statsCard: { backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 16, padding: 16, marginTop: 20, minWidth: 200 },
   statsLabel: { color: "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: "700", letterSpacing: 1 },

@@ -11,7 +11,10 @@ import "@/lib/geofence";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: false,
-    shouldSetBadge: false,
+    // Admin push notifications carry a server-computed pending-request
+    // count as their badge, so apply it even if the notification arrives
+    // while the app is already open on some other tab.
+    shouldSetBadge: true,
     shouldShowBanner: true,
     shouldShowList: true,
   }),
@@ -50,6 +53,7 @@ export default function RootLayout() {
         <Stack.Screen name="c/[tag]" />
         <Stack.Screen name="geofence-confirm" />
         <Stack.Screen name="admin-teacher/[id]" options={{ headerShown: true }} />
+        <Stack.Screen name="admin-whos-in" options={{ headerShown: true }} />
       </Stack>
     </AuthProvider>
   );
