@@ -1,10 +1,32 @@
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import * as Notifications from "expo-notifications";
-import { SCHOOL_LAT, SCHOOL_LNG, SCHOOL_RADIUS_METERS } from "@/lib/config";
+import { API_BASE_URL, SCHOOL_LAT, SCHOOL_LNG, SCHOOL_RADIUS_METERS } from "@/lib/config";
+import { getStoredSession } from "@/lib/auth";
 
 export const GEOFENCE_TASK_NAME = "ojds-school-geofence";
 const REGION_ID = "school";
+
+/**
+ * Whether the signed-in user is currently clocked in, right now - a
+ * direct minimal fetch (not the shared apiFetch helper) since this runs
+ * from a background task, where redirecting on a 401 makes no sense.
+ */
+async function isCurrentlyClockedIn(): Promise<boolean> {
+  const session = await getStoredSession();
+  if (!session) return false;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/me/summary`, {
+      headers: { Authorization: `Bearer ${session.sessionId}` },
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Boolean(data?.currentlyIn);
+  } catch {
+    return false;
+  }
+}
 
 // Registering the task must happen at module load, not inside a
 // component - iOS can relaunch the app in the background purely to
@@ -15,6 +37,12 @@ TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
   if (error) return;
   const { eventType } = (data ?? {}) as { eventType?: Location.GeofencingEventType };
   if (eventType !== Location.GeofencingEventType.Exit) return;
+
+  // The OS can redeliver an "exit" for a region you're already outside of
+  // (e.g. when monitoring restarts on launch while already away from
+  // school) - only worth a reminder if there's actually something open to
+  // clock out of.
+  if (!(await isCurrentlyClockedIn())) return;
 
   await Notifications.scheduleNotificationAsync({
     content: {
