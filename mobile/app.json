@@ -8,6 +8,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/f199c8f1-cd59-40c7-ac71-522127d3e57a"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "org.ojds.clock",
@@ -15,7 +21,7 @@
       "associatedDomains": [
         "applinks:ojdsclock.vercel.app"
       ],
-      "buildNumber": "5"
+      "buildNumber": "6"
     },
     "android": {
       "package": "org.ojds.clock",
