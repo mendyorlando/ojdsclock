@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Switch, Alert } from "react-native";
+import { View, Text, Image, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Switch, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { enableGeofence, disableGeofence, isGeofenceEnabled } from "@/lib/geofence";
 import { AdminOverview } from "@/components/AdminOverview";
+
+function timeOfDayGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 type DaySummary = {
   label: string;
@@ -118,8 +126,22 @@ function TeacherDashboard() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
     >
-      <Text style={styles.greeting}>{user?.name.split(" ")[0]}&apos;s hours</Text>
-      <Text style={styles.status}>{summary.currentlyIn ? "Currently clocked in" : "Not clocked in right now"}</Text>
+      <View style={styles.hero}>
+        <Image source={require("@/assets/ojds-logo.png")} style={styles.heroLogo} resizeMode="contain" />
+        <Text style={styles.greeting}>
+          {timeOfDayGreeting()}, {user?.name.split(" ")[0]}
+        </Text>
+        <View style={[styles.statusPill, summary.currentlyIn ? styles.statusPillIn : styles.statusPillOut]}>
+          <Ionicons
+            name={summary.currentlyIn ? "checkmark-circle" : "moon-outline"}
+            size={15}
+            color={summary.currentlyIn ? "#0b3b38" : "#fff"}
+          />
+          <Text style={[styles.statusPillText, summary.currentlyIn ? styles.statusPillTextIn : styles.statusPillTextOut]}>
+            {summary.currentlyIn ? "Currently clocked in" : "Not clocked in right now"}
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.statsCard}>
         <Text style={styles.statsLabel}>This month</Text>
@@ -140,8 +162,15 @@ function TeacherDashboard() {
         </View>
       </View>
 
-      <View style={styles.streakCard}>
-        <Text style={styles.streakText}>{summary.streak}-day streak</Text>
+      <View style={[styles.streakCard, summary.streak > 0 && styles.streakCardActive]}>
+        <Ionicons
+          name={summary.streak > 0 ? "flame" : "flame-outline"}
+          size={22}
+          color={summary.streak > 0 ? "#c2570a" : "#9db3b0"}
+        />
+        <Text style={[styles.streakText, summary.streak > 0 && styles.streakTextActive]}>
+          {summary.streak > 0 ? `${summary.streak}-day streak` : "No streak yet - tap in today to start one"}
+        </Text>
       </View>
 
       <View style={styles.weekCard}>
@@ -182,8 +211,30 @@ const styles = StyleSheet.create({
   retryButton: { backgroundColor: "#17ab9d", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   retryButtonText: { color: "#fff", fontWeight: "700" },
   content: { padding: 20, paddingBottom: 48 },
-  greeting: { fontSize: 22, fontWeight: "800", color: "#0b3b38" },
-  status: { fontSize: 13, color: "#4b6b68", marginTop: 4, marginBottom: 20, fontWeight: "600" },
+  hero: {
+    backgroundColor: "#0b3b38",
+    borderRadius: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  heroLogo: { width: 48, height: 48, marginBottom: 12 },
+  greeting: { fontSize: 22, fontWeight: "800", color: "#fff", textAlign: "center" },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginTop: 16,
+  },
+  statusPillIn: { backgroundColor: "#a7f3d0" },
+  statusPillOut: { backgroundColor: "rgba(255,255,255,0.12)" },
+  statusPillText: { fontSize: 13, fontWeight: "700" },
+  statusPillTextIn: { color: "#0b3b38" },
+  statusPillTextOut: { color: "#fff" },
   statsCard: { backgroundColor: "#0f766e", borderRadius: 20, padding: 20, marginBottom: 16 },
   statsLabel: { color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   statsValue: { color: "#fff", fontSize: 32, fontWeight: "800", marginTop: 4 },
@@ -192,6 +243,9 @@ const styles = StyleSheet.create({
   statsCellValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
   statsCellLabel: { color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: "700", marginTop: 2 },
   streakCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
@@ -199,7 +253,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5efee",
   },
-  streakText: { fontWeight: "800", color: "#0b3b38", fontSize: 15 },
+  streakCardActive: { backgroundColor: "#fff3e8", borderColor: "#fbd9b5" },
+  streakText: { fontWeight: "700", color: "#4b6b68", fontSize: 14 },
+  streakTextActive: { fontWeight: "800", color: "#0b3b38" },
   weekCard: { backgroundColor: "#fff", borderRadius: 20, padding: 16, borderWidth: 1, borderColor: "#e5efee" },
   weekTitle: { fontWeight: "800", color: "#0b3b38", marginBottom: 10 },
   dayRow: {
