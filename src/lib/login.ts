@@ -2,9 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth";
 import { formatDeviceLabel } from "@/lib/device";
 import { notifyAdminsOfDeviceRequest } from "@/lib/expoPush";
-import type { User } from "@prisma/client";
+import type { User, School } from "@prisma/client";
 
-export type LoginResult = { ok: true; user: User } | { ok: false; reason: "invalid" | "device_pending" };
+export type LoginResult =
+  | { ok: true; user: User & { school: School } }
+  | { ok: false; reason: "invalid" | "device_pending" };
 
 /**
  * Verifies credentials and, for teacher accounts, enforces the
@@ -17,7 +19,7 @@ export async function attemptLogin(
   deviceId: string,
   userAgent: string,
 ): Promise<LoginResult> {
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await prisma.user.findUnique({ where: { username }, include: { school: true } });
   const ok = user ? await verifyPassword(password, user.passwordHash) : false;
 
   if (!user || !ok) return { ok: false, reason: "invalid" };

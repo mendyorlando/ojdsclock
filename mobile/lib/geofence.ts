@@ -1,8 +1,8 @@
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import * as Notifications from "expo-notifications";
-import { API_BASE_URL, SCHOOL_LAT, SCHOOL_LNG, SCHOOL_RADIUS_METERS } from "@/lib/config";
-import { getStoredSession } from "@/lib/auth";
+import { API_BASE_URL } from "@/lib/config";
+import { getStoredSession, ensureSchoolLoaded } from "@/lib/auth";
 
 export const GEOFENCE_TASK_NAME = "ojds-school-geofence";
 const REGION_ID = "school";
@@ -63,11 +63,20 @@ export async function isGeofenceEnabled(): Promise<boolean> {
 
 /**
  * Requests permissions (foreground, then background - iOS requires this
- * order) and starts monitoring the one region around the school. Returns
- * why it didn't start when it didn't, so the UI can show a real message
- * instead of silently doing nothing.
+ * order) and starts monitoring the one region around the signed-in
+ * user's own school (each school has its own coordinates, so this can't
+ * be a fixed constant anymore). Returns why it didn't start when it
+ * didn't, so the UI can show a real message instead of silently doing
+ * nothing.
  */
-export async function enableGeofence(): Promise<"ok" | "foreground_denied" | "background_denied"> {
+export async function enableGeofence(): Promise<"ok" | "foreground_denied" | "background_denied" | "no_session"> {
+  // ensureSchoolLoaded (not the plain getStoredSession) so a session that
+  // signed in before "school" existed gets backfilled here too - this can
+  // run from the dashboard toggle before AuthContext's own refresh has
+  // necessarily done so.
+  const session = await ensureSchoolLoaded();
+  if (!session || !session.user.school) return "no_session";
+
   const fg = await Location.requestForegroundPermissionsAsync();
   if (fg.status !== "granted") return "foreground_denied";
 
@@ -76,12 +85,13 @@ export async function enableGeofence(): Promise<"ok" | "foreground_denied" | "ba
 
   await Notifications.requestPermissionsAsync();
 
+  const { latitude, longitude, radiusMeters } = session.user.school;
   await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, [
     {
       identifier: REGION_ID,
-      latitude: SCHOOL_LAT,
-      longitude: SCHOOL_LNG,
-      radius: SCHOOL_RADIUS_METERS,
+      latitude,
+      longitude,
+      radius: radiusMeters,
       notifyOnEnter: false,
       notifyOnExit: true,
     },

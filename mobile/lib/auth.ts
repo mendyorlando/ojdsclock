@@ -6,7 +6,27 @@ const DEVICE_ID_KEY = "ojds_device_id";
 const SESSION_KEY = "ojds_session_id";
 const USER_KEY = "ojds_user";
 
-export type CurrentUser = { id: string; name: string; role: "TEACHER" | "ADMIN"; title: string | null };
+export type School = {
+  name: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+};
+
+export type CurrentUser = {
+  id: string;
+  name: string;
+  role: "TEACHER" | "ADMIN";
+  title: string | null;
+  // Optional, not just possibly-missing-at-runtime: anyone who signed in
+  // before this field existed has an older cached user object with no
+  // "school" key at all - see ensureSchoolLoaded() below, which backfills
+  // it from the server the first time such a session is loaded.
+  school?: School;
+};
 
 /**
  * Same role as the web login form's localStorage UUID: a value generated
@@ -106,4 +126,31 @@ export async function getStoredSession(): Promise<{ sessionId: string; user: Cur
   ]);
   if (!sessionId || !userJson) return null;
   return { sessionId, user: JSON.parse(userJson) as CurrentUser };
+}
+
+/**
+ * Same as getStoredSession(), but backfills "school" from the server for a
+ * session that signed in before that field existed (an older cached user
+ * object has no "school" key at all, not just an empty one) - fixes that
+ * once per device by persisting the refreshed user back to SecureStore, so
+ * every other screen can keep assuming a signed-in user has its school
+ * without a network call on every launch. Falls back to the stale cached
+ * user (school still missing) if the request fails, e.g. offline - a
+ * screen showing default OJDS branding for one launch beats a crash.
+ */
+export async function ensureSchoolLoaded(): Promise<{ sessionId: string; user: CurrentUser } | null> {
+  const stored = await getStoredSession();
+  if (!stored || stored.user.school) return stored;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/me`, {
+      headers: { Authorization: `Bearer ${stored.sessionId}` },
+    });
+    if (!res.ok) return stored;
+    const fresh = (await res.json()) as CurrentUser;
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(fresh));
+    return { sessionId: stored.sessionId, user: fresh };
+  } catch {
+    return stored;
+  }
 }

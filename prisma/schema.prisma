@@ -35,6 +35,24 @@ enum RequestStatus {
   DENIED
 }
 
+// Which school a user belongs to - the app auto-detects this from who's
+// logging in (each username belongs to exactly one school) rather than
+// asking the employee to pick one, so it can still feel like it's made
+// specifically for their school even once a second school exists.
+model School {
+  id             String   @id @default(cuid())
+  name           String
+  logoUrl        String?
+  primaryColor   String   @default("#17ab9d")
+  secondaryColor String   @default("#0f766e")
+  latitude       Float
+  longitude      Float
+  radiusMeters   Int      @default(150)
+  createdAt      DateTime @default(now())
+
+  users User[]
+}
+
 model User {
   id            String   @id @default(cuid())
   username      String   @unique
@@ -45,6 +63,8 @@ model User {
   payType       PayType  @default(HOURLY)
   boundDeviceId String?
   createdAt     DateTime @default(now())
+  schoolId      String
+  school        School   @relation(fields: [schoolId], references: [id])
 
   clockEvents        ClockEvent[]
   sessions           Session[]
@@ -52,6 +72,8 @@ model User {
   correctionRequests CorrectionRequest[]
   deviceRequests     DeviceRequest[]
   expoPushTokens     ExpoPushToken[]
+
+  @@index([schoolId])
 }
 
 model ClockEvent {

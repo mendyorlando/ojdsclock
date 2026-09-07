@@ -1,6 +1,28 @@
 import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import type { User, School } from "@prisma/client";
+
+// The JSON shape the mobile app persists as its "CurrentUser" - shared by
+// the login response and /api/me (which re-fetches this same shape for a
+// session that signed in before a given field, like school, existed).
+export function serializeCurrentUser(user: User & { school: School }) {
+  return {
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    title: user.title,
+    school: {
+      name: user.school.name,
+      logoUrl: user.school.logoUrl,
+      primaryColor: user.school.primaryColor,
+      secondaryColor: user.school.secondaryColor,
+      latitude: user.school.latitude,
+      longitude: user.school.longitude,
+      radiusMeters: user.school.radiusMeters,
+    },
+  };
+}
 
 const SESSION_COOKIE = "ojds_session";
 // Teachers sign in once on their own phone and every tap after that should
@@ -51,7 +73,7 @@ export async function getCurrentUser() {
 
   const session = await prisma.session.findUnique({
     where: { id: token },
-    include: { user: true },
+    include: { user: { include: { school: true } } },
   });
 
   if (!session || session.expiresAt < new Date()) {

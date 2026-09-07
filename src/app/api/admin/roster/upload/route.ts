@@ -74,6 +74,7 @@ export async function POST(req: Request) {
           title: title || null,
           role: "TEACHER",
           passwordHash: await hashPassword(password),
+          schoolId: user.schoolId,
         },
       });
       created += 1;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
-import { getStoredSession, logout as logoutStorage, onSessionInvalidated, type CurrentUser } from "./auth";
+import { ensureSchoolLoaded, logout as logoutStorage, onSessionInvalidated, type CurrentUser } from "./auth";
 import { registerForAdminPushNotifications } from "./pushNotifications";
 
 type AuthState = {
@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const stored = await getStoredSession();
+    const stored = await ensureSchoolLoaded();
     setUser(stored?.user ?? null);
   }, []);
 

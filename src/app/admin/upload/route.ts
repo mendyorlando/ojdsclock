@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
           title: title || null,
           role: "TEACHER",
           passwordHash: await hashPassword(password),
+          schoolId: user.schoolId,
         },
       });
       created += 1;

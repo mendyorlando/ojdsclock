@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession } from "@/lib/auth";
+import { createSession, serializeCurrentUser } from "@/lib/auth";
 import { attemptLogin } from "@/lib/login";
 
 export async function POST(req: NextRequest) {
@@ -21,13 +21,5 @@ export async function POST(req: NextRequest) {
 
   const sessionId = await createSession(result.user.id);
 
-  return NextResponse.json({
-    sessionId,
-    user: {
-      id: result.user.id,
-      name: result.user.name,
-      role: result.user.role,
-      title: result.user.title,
-    },
-  });
+  return NextResponse.json({ sessionId, user: serializeCurrentUser(result.user) });
 }

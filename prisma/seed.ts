@@ -30,6 +30,8 @@ async function main() {
   await prisma.clockEvent.deleteMany();
   await prisma.user.deleteMany();
 
+  const school = await prisma.school.findFirstOrThrow();
+
   const adminPasswordHash = await bcrypt.hash("admin123", 10);
   await prisma.user.create({
     data: {
@@ -39,6 +41,7 @@ async function main() {
       role: "ADMIN",
       title: "Front Office",
       payType: "HOURLY",
+      schoolId: school.id,
     },
   });
 
@@ -126,6 +129,7 @@ async function main() {
         title: t.title,
         role: "TEACHER",
         payType: t.payType,
+        schoolId: school.id,
       },
     });
 

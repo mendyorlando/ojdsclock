@@ -13,14 +13,13 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(a));
 }
 
-export type GeoCheckResult = { ok: true } | { ok: false; reason: "not_configured" | "too_far" };
+export type GeoCheckResult = { ok: true } | { ok: false; reason: "too_far" };
 
-export function checkWithinSchoolRadius(lat: number, lng: number): GeoCheckResult {
-  const schoolLat = Number(process.env.SCHOOL_LAT);
-  const schoolLng = Number(process.env.SCHOOL_LNG);
-  const radius = Number(process.env.SCHOOL_RADIUS_METERS);
-  if (!schoolLat || !schoolLng || !radius) return { ok: false, reason: "not_configured" };
-
-  const distance = haversineMeters(lat, lng, schoolLat, schoolLng);
-  return distance <= radius ? { ok: true } : { ok: false, reason: "too_far" };
+export function checkWithinSchoolRadius(
+  lat: number,
+  lng: number,
+  school: { latitude: number; longitude: number; radiusMeters: number },
+): GeoCheckResult {
+  const distance = haversineMeters(lat, lng, school.latitude, school.longitude);
+  return distance <= school.radiusMeters ? { ok: true } : { ok: false, reason: "too_far" };
 }

@@ -18,6 +18,7 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const school = await prisma.school.findFirstOrThrow();
 
   const admin = await prisma.user.upsert({
     where: { username },
@@ -29,6 +30,7 @@ async function main() {
       role: "ADMIN",
       title: "Front Office",
       payType: "HOURLY",
+      schoolId: school.id,
     },
   });
 

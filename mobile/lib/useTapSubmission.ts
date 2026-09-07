@@ -65,11 +65,17 @@ function useSubmission<Payload>(call: (payload: Payload) => Promise<ResultData>)
   return { state, submit, reset, setError };
 }
 
+// Either a real NFC tap (crypto-verified against the tag itself) or a
+// scanned QR-code fallback (no crypto payload to verify, so verified by
+// GPS distance from the school instead - see checkWithinSchoolRadius on
+// the server).
+type TapPayload = { tag: string } & ({ piccData: string; cmac: string } | { lat: number; lng: number });
+
 export function useTapSubmission() {
-  return useSubmission(async (payload: { tag: string; piccData: string; cmac: string }) =>
+  return useSubmission(async (payload: TapPayload) =>
     apiFetch<ResultData>(`/api/clock/${payload.tag}`, {
       method: "POST",
-      body: JSON.stringify({ piccData: payload.piccData, cmac: payload.cmac }),
+      body: JSON.stringify("piccData" in payload ? { piccData: payload.piccData, cmac: payload.cmac } : { lat: payload.lat, lng: payload.lng }),
     }),
   );
 }

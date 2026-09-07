@@ -8,6 +8,9 @@ import { useAuth } from "@/lib/AuthContext";
 import { enableGeofence, disableGeofence, isGeofenceEnabled } from "@/lib/geofence";
 import { AdminOverview } from "@/components/AdminOverview";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- static image asset, same pattern used throughout this app
+const defaultLogo = require("@/assets/full-ojds-logo.png");
+
 function timeOfDayGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -63,6 +66,8 @@ function TeacherDashboard() {
         const result = await enableGeofence();
         if (result === "ok") {
           setGeofenceOn(true);
+        } else if (result === "no_session") {
+          Alert.alert("Please sign in again", "Something went wrong. Please sign out and back in, then try again.");
         } else {
           Alert.alert(
             "Location permission needed",
@@ -127,8 +132,16 @@ function TeacherDashboard() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#17ab9d" />}
     >
-      <LinearGradient colors={["#17ab9d", "#0f766e"]} style={styles.hero}>
-        <Image source={require("@/assets/full-ojds-logo.png")} style={styles.heroLogo} resizeMode="contain" />
+      <LinearGradient
+        colors={[user?.school?.primaryColor ?? "#17ab9d", user?.school?.secondaryColor ?? "#0f766e"]}
+        style={styles.hero}
+      >
+        <Image
+          source={user?.school?.logoUrl ? { uri: user.school.logoUrl } : defaultLogo}
+          style={styles.heroLogo}
+          resizeMode="contain"
+          alt={`${user?.school?.name ?? "School"} logo`}
+        />
         <Text style={styles.greeting}>
           {timeOfDayGreeting()}, {user?.name.split(" ")[0]}
         </Text>

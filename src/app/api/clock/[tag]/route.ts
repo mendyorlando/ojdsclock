@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ tag: s
     if (!(tag in TAG_LABELS)) {
       return NextResponse.json({ error: "invalid" }, { status: 403 });
     }
-    const geo = checkWithinSchoolRadius(lat, lng);
+    const geo = checkWithinSchoolRadius(lat, lng, user.school);
     if (!geo.ok) {
       return NextResponse.json({ error: geo.reason }, { status: 403 });
     }
