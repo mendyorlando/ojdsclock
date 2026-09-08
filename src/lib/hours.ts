@@ -122,15 +122,10 @@ async function closedDateSet(from: Date, to: Date): Promise<Set<string>> {
   return new Set(closures.map((c) => startOfDay(c.date).toDateString()));
 }
 
-export async function computeStreak(userId: string, now: Date = new Date()): Promise<number> {
-  const lookback = new Date(now);
-  lookback.setDate(lookback.getDate() - 70);
-
-  const [events, closed] = await Promise.all([
-    fetchEvents(userId, lookback, new Date(now.getTime() + 1)),
-    closedDateSet(lookback, new Date(now.getTime() + 1)),
-  ]);
-  const days = pairEvents(events, now);
+// Pulled out of computeStreak() so computeAdminOverview() can reuse it
+// against a single already-fetched batch of events for every teacher,
+// rather than each teacher re-running this same query pair.
+function streakFromDays(days: DayHours[], closed: Set<string>, now: Date): number {
   // A day counts as worked once there's a session on it, even one that
   // just started seconds ago and rounds to 0.0 hours so far, otherwise the
   // very moment someone clocks in, "today" looks unworked and the streak
@@ -163,6 +158,18 @@ export async function computeStreak(userId: string, now: Date = new Date()): Pro
   }
 
   return streak;
+}
+
+export async function computeStreak(userId: string, now: Date = new Date()): Promise<number> {
+  const lookback = new Date(now);
+  lookback.setDate(lookback.getDate() - 70);
+
+  const [events, closed] = await Promise.all([
+    fetchEvents(userId, lookback, new Date(now.getTime() + 1)),
+    closedDateSet(lookback, new Date(now.getTime() + 1)),
+  ]);
+  const days = pairEvents(events, now);
+  return streakFromDays(days, closed, now);
 }
 
 const STREAK_MILESTONES = [7, 30, 100, 180, 365];
@@ -258,16 +265,61 @@ export async function computeAdminOverview(now: Date = new Date()) {
     orderBy: { name: "asc" },
   });
 
-  const rows: AdminRow[] = await Promise.all(
-    teachers.map(async (user) => {
-      const [year, currentlyIn, streak] = await Promise.all([
-        computeYearStats(user.id, now),
-        isCurrentlyClockedIn(user.id),
-        computeStreak(user.id, now),
-      ]);
-      return { user, ...year, currentlyIn, streak };
+  // Was 3-4 queries PER teacher (year stats, current status, streak, and a
+  // closures lookup that's identical for everyone) fired all at once - fine
+  // with a couple of teachers, but the concurrent query count scales
+  // linearly with staff size and started queueing behind the database's
+  // connection pool once there were enough of them, adding real seconds to
+  // every load of this screen. Fetching every teacher's events and the one
+  // shared closures list just once, then computing each row in memory,
+  // keeps this at exactly 2 queries no matter how many staff there are.
+  const weekStart = startOfWeek(now);
+  const monthStart = startOfMonth(now);
+  const yearStart = startOfYear(now);
+  const streakLookback = new Date(now);
+  streakLookback.setDate(streakLookback.getDate() - 70);
+  const rangeStart = streakLookback < yearStart ? streakLookback : yearStart;
+  const tomorrow = new Date(startOfDay(now));
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const teacherIds = teachers.map((t) => t.id);
+  const [allEvents, closed] = await Promise.all([
+    prisma.clockEvent.findMany({
+      where: { userId: { in: teacherIds }, timestamp: { gte: rangeStart, lt: tomorrow } },
+      orderBy: { timestamp: "asc" },
     }),
-  );
+    closedDateSet(streakLookback, new Date(now.getTime() + 1)),
+  ]);
+
+  const eventsByUser = new Map<string, typeof allEvents>();
+  for (const ev of allEvents) {
+    const list = eventsByUser.get(ev.userId);
+    if (list) list.push(ev);
+    else eventsByUser.set(ev.userId, [ev]);
+  }
+
+  const rows: AdminRow[] = teachers.map((user) => {
+    const events = eventsByUser.get(user.id) ?? [];
+    const days = pairEvents(events, now);
+
+    const year: YearStats = {
+      hoursThisWeek: round1(sum(days.filter((d) => d.date >= weekStart).map((d) => d.hours))),
+      hoursThisMonth: round1(sum(days.filter((d) => d.date >= monthStart).map((d) => d.hours))),
+      hoursThisYear: round1(sum(days.filter((d) => d.date >= yearStart).map((d) => d.hours))),
+      daysThisYear: days.filter((d) => d.date >= yearStart && d.hours > 0).length,
+    };
+
+    // Bounded by the same 70-day/year-start window as everything else here
+    // (unlike the single-teacher isCurrentlyClockedIn, which has no date
+    // bound) - someone whose last real clock event is older than that has
+    // a stuck-open session that's already worth an admin's attention for
+    // other reasons, so this is a reasonable trade for not needing a third
+    // per-teacher query.
+    const currentlyIn = events.length > 0 && events[events.length - 1].type === "IN";
+    const streak = streakFromDays(days, closed, now);
+
+    return { user, ...year, currentlyIn, streak };
+  });
 
   const totalStaff = rows.length;
   const clockedInNow = rows.filter((r) => r.currentlyIn).length;

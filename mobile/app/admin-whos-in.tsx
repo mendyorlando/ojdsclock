@@ -40,9 +40,16 @@ export default function WhosInScreen() {
     setRefreshing(false);
   }
 
+  // Set on every branch (loading/error/loaded) - Expo Router falls back to
+  // the raw route filename and parent group folder name as the header
+  // title/back-button label until a screen's own <Stack.Screen> renders,
+  // which otherwise flashes "admin-whos-in" / "(app)" while this loads.
+  const screenOptions = <Stack.Screen options={{ title: "Who's In", headerBackTitle: "Overview" }} />;
+
   if (loading) {
     return (
       <View style={styles.center}>
+        {screenOptions}
         <ActivityIndicator />
       </View>
     );
@@ -51,6 +58,7 @@ export default function WhosInScreen() {
   if (error || names === null) {
     return (
       <View style={styles.center}>
+        {screenOptions}
         <Text style={styles.errorText}>Couldn&apos;t load who&apos;s in. Check your connection and try again.</Text>
         <Pressable style={styles.retryButton} onPress={() => load()}>
           <Text style={styles.retryButtonText}>Retry</Text>
@@ -61,7 +69,7 @@ export default function WhosInScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Who's In", headerBackTitle: "Overview" }} />
+      {screenOptions}
       <FlatList
         style={styles.screen}
         contentContainerStyle={styles.content}
