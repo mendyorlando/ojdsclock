@@ -52,8 +52,20 @@ export default function RootLayout() {
         <Stack.Screen name="(app)" />
         <Stack.Screen name="c/[tag]" />
         <Stack.Screen name="geofence-confirm" />
-        <Stack.Screen name="admin-teacher/[id]" options={{ headerShown: true }} />
-        <Stack.Screen name="admin-whos-in" options={{ headerShown: true }} />
+        {/* Static fallback title/back-label here, matching each screen's own
+            loading-state <Stack.Screen> - navigation shows this route's
+            options for one frame before the screen component itself has
+            even mounted, so setting nothing here still flashes the raw
+            route name/parent group, no matter what the mounted component
+            later renders. */}
+        <Stack.Screen
+          name="admin-teacher/[id]"
+          options={{ headerShown: true, title: "Teacher", headerBackTitle: "Overview" }}
+        />
+        <Stack.Screen
+          name="admin-whos-in"
+          options={{ headerShown: true, title: "Who's In", headerBackTitle: "Overview" }}
+        />
       </Stack>
     </AuthProvider>
   );
