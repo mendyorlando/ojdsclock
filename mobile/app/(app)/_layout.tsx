@@ -59,8 +59,8 @@ export default function AppLayout() {
         options={{ title: "Calendar", href: isAdmin ? undefined : null, tabBarIcon: tabIcon("calendar-outline") }}
       />
       <Tabs.Screen
-        name="provision"
-        options={{ title: "Setup Tag", href: isAdmin ? undefined : null, tabBarIcon: tabIcon("construct-outline") }}
+        name="settings"
+        options={{ title: "Settings", href: isAdmin ? undefined : null, tabBarIcon: tabIcon("settings-outline") }}
       />
     </Tabs>
   );

@@ -78,7 +78,7 @@ export async function checkLongShifts(now: Date = new Date()): Promise<LongShift
   const nowParts = partsInSchoolZone(now);
   if (nowParts.hour < CUTOFF_HOUR_ET) return { checked: 0, notified: 0 };
 
-  const teachers = await prisma.user.findMany({ where: { role: "TEACHER" } });
+  const teachers = await prisma.user.findMany({ where: { role: "TEACHER", active: true } });
   let notified = 0;
 
   for (const teacher of teachers) {

@@ -56,6 +56,7 @@ export async function POST(req: Request) {
         data: {
           name: name || existing.name,
           payType,
+          active: true,
           ...(title ? { title } : {}),
           ...(password ? { passwordHash: await hashPassword(password) } : {}),
         },

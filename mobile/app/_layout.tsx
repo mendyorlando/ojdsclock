@@ -66,6 +66,10 @@ export default function RootLayout() {
           name="admin-whos-in"
           options={{ headerShown: true, title: "Who's In", headerBackTitle: "Overview" }}
         />
+        <Stack.Screen
+          name="provision"
+          options={{ headerShown: true, title: "Set Up Tag", headerBackTitle: "Settings" }}
+        />
       </Stack>
     </AuthProvider>
   );

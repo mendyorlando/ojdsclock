@@ -22,7 +22,10 @@ export async function attemptLogin(
   const user = await prisma.user.findUnique({ where: { username }, include: { school: true } });
   const ok = user ? await verifyPassword(password, user.passwordHash) : false;
 
-  if (!user || !ok) return { ok: false, reason: "invalid" };
+  // Same "invalid" reason as a wrong password, not a distinct error - a
+  // removed account shouldn't reveal to whoever's typing that the username
+  // ever existed.
+  if (!user || !ok || !user.active) return { ok: false, reason: "invalid" };
 
   // Admin isn't an employee tapping a door tag, so it can sign in from
   // anywhere. Teacher accounts are locked to whichever device they first

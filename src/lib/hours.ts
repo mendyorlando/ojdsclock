@@ -261,7 +261,7 @@ export type AdminRow = YearStats & {
 
 export async function computeAdminOverview(now: Date = new Date()) {
   const teachers = await prisma.user.findMany({
-    where: { role: "TEACHER" },
+    where: { role: "TEACHER", active: true },
     orderBy: { name: "asc" },
   });
 

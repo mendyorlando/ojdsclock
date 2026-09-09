@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, StyleSheet, Pressable } from "react-native";
 import { useFocusEffect, router } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -27,8 +26,6 @@ type Overview = {
   rows: TeacherRow[];
 };
 
-type UploadResult = { created: number; updated: number; skipped: number };
-
 /**
  * What an admin sees instead of the personal "Hours" view (admins don't
  * clock in themselves) - a staff-wide summary plus a roster to drill into
@@ -40,7 +37,6 @@ export function AdminOverview() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -62,33 +58,6 @@ export function AdminOverview() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
-  }
-
-  async function onUploadRoster() {
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: ["text/csv", "text/comma-separated-values", "public.comma-separated-values-text"],
-      copyToCacheDirectory: true,
-    });
-    if (picked.canceled || !picked.assets?.[0]) return;
-
-    setUploading(true);
-    try {
-      const csv = await fetch(picked.assets[0].uri).then((r) => r.text());
-      const result = await apiFetch<UploadResult>("/api/admin/roster/upload", {
-        method: "POST",
-        body: JSON.stringify({ csv }),
-      });
-      Alert.alert(
-        "Roster updated",
-        `Created ${result.created} new teacher${result.created === 1 ? "" : "s"}. Updated ${result.updated}.` +
-          (result.skipped > 0 ? ` Skipped ${result.skipped} row(s).` : ""),
-      );
-      await load();
-    } catch {
-      Alert.alert("Couldn't upload", "Please check the file and your connection, then try again.");
-    } finally {
-      setUploading(false);
-    }
   }
 
   if (loading) {
@@ -167,17 +136,6 @@ export function AdminOverview() {
         </Pressable>
       ))}
 
-      <View style={styles.uploadCard}>
-        <Text style={styles.uploadTitle}>Import teacher roster</Text>
-        <Text style={styles.uploadSubtitle}>
-          A CSV with columns: name, username, password, payType (Hourly or Job), and an optional title. Existing
-          usernames are updated, new ones are created.
-        </Text>
-        <Pressable style={styles.uploadButton} onPress={onUploadRoster} disabled={uploading}>
-          {uploading ? <ActivityIndicator color="#fff" /> : <Text style={styles.uploadButtonText}>Choose CSV file</Text>}
-        </Pressable>
-      </View>
-
       <Pressable style={styles.signOut} onPress={signOut}>
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
@@ -238,18 +196,6 @@ const styles = StyleSheet.create({
   statusPillText: { fontSize: 12, fontWeight: "800" },
   statusInText: { color: "#178a52" },
   statusOutText: { color: "#4b6b68" },
-  uploadCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#e5efee",
-  },
-  uploadTitle: { fontWeight: "800", color: "#0b3b38", fontSize: 14 },
-  uploadSubtitle: { color: "#4b6b68", fontSize: 12, marginTop: 4, marginBottom: 12, fontWeight: "600" },
-  uploadButton: { backgroundColor: "#17ab9d", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
-  uploadButtonText: { color: "#fff", fontWeight: "700" },
   signOut: { marginTop: 32, alignItems: "center" },
   signOutText: { color: "#b5443a", fontWeight: "700" },
 });
