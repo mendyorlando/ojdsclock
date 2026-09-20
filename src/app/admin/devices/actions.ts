@@ -75,3 +75,13 @@ export async function unbindDevice(formData: FormData) {
   revalidatePath(`/admin/teacher/${userId}`);
   revalidatePath("/admin/devices");
 }
+
+export async function setDeviceLockExempt(formData: FormData) {
+  await requireAdmin();
+  const userId = String(formData.get("userId") || "");
+  const current = formData.get("current") === "true";
+  if (userId) {
+    await prisma.user.update({ where: { id: userId }, data: { deviceLockExempt: !current } });
+  }
+  revalidatePath(`/admin/teacher/${userId}`);
+}

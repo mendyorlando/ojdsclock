@@ -10,6 +10,7 @@ import {
   Pressable,
   Alert,
   Platform,
+  Switch,
 } from "react-native";
 import { useLocalSearchParams, useFocusEffect, router, Stack } from "expo-router";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
@@ -27,6 +28,7 @@ type TeacherSummary = {
   title: string | null;
   payType: "HOURLY" | "PER_JOB";
   hasBoundDevice: boolean;
+  deviceLockExempt: boolean;
   pendingRequests: PendingRequest[];
   days: DaySummary[];
   streak: number;
@@ -170,6 +172,21 @@ export default function AdminTeacherScreen() {
       Alert.alert("Added", "Hours added (only time not already on record).");
     } catch {
       Alert.alert("Couldn't add hours", "Make sure the end time is after the start time.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onToggleDeviceLockExempt(next: boolean) {
+    setBusy(true);
+    try {
+      await apiFetch(`/api/admin/teacher/${id}/device-lock-exempt`, {
+        method: "POST",
+        body: JSON.stringify({ exempt: next }),
+      });
+      await load();
+    } catch {
+      Alert.alert("Something went wrong", "Please try again.");
     } finally {
       setBusy(false);
     }
@@ -532,6 +549,16 @@ export default function AdminTeacherScreen() {
                   <Text style={styles.unbindButtonText}>Unbind device</Text>
                 </Pressable>
               )}
+              <View style={styles.exemptRow}>
+                <View style={styles.exemptTextWrap}>
+                  <Text style={styles.exemptLabel}>Allow sign-in from any device</Text>
+                  <Text style={styles.fieldSubtext}>
+                    For a shared/demo account (e.g. App Store review) that needs to work on whatever device is on
+                    hand each time, instead of locking to one.
+                  </Text>
+                </View>
+                <Switch value={summary.deviceLockExempt} onValueChange={onToggleDeviceLockExempt} disabled={busy} />
+              </View>
             </View>
           </View>
         )}
@@ -657,4 +684,7 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: "row", gap: 10 },
   unbindButton: { backgroundColor: "#fde8e6", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
   unbindButtonText: { color: "#b5443a", fontWeight: "700" },
+  exemptRow: { flexDirection: "row", alignItems: "center", marginTop: 14, gap: 12 },
+  exemptTextWrap: { flex: 1 },
+  exemptLabel: { fontWeight: "800", color: "#0b3b38", fontSize: 13, marginBottom: 2 },
 });

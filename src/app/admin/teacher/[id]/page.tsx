@@ -7,7 +7,7 @@ import { Nav } from "@/components/Nav";
 import { FlameIcon } from "@/components/icons";
 import { updateTeacherInfo, addHoursAction, generateDemoDataAction } from "./actions";
 import { approveRequest, denyRequest } from "@/app/admin/requests/actions";
-import { unbindDevice } from "@/app/admin/devices/actions";
+import { unbindDevice, setDeviceLockExempt } from "@/app/admin/devices/actions";
 
 function toInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -264,7 +264,7 @@ export default async function TeacherDetailPage({
                   : "Not bound yet. The next phone this account signs in from becomes its locked device."}
               </p>
               {teacher.boundDeviceId && (
-                <form action={unbindDevice}>
+                <form action={unbindDevice} className="mb-3">
                   <input type="hidden" name="userId" value={teacher.id} />
                   <button
                     type="submit"
@@ -274,6 +274,18 @@ export default async function TeacherDetailPage({
                   </button>
                 </form>
               )}
+              <form action={setDeviceLockExempt}>
+                <input type="hidden" name="userId" value={teacher.id} />
+                <input type="hidden" name="current" value={String(teacher.deviceLockExempt)} />
+                <button
+                  type="submit"
+                  className="w-full rounded-xl py-2.5 text-sm font-bold text-teal-700 bg-teal-100 cursor-pointer"
+                >
+                  {teacher.deviceLockExempt
+                    ? "Exempt from device lock (allow sign-in from any device) - tap to turn off"
+                    : "Allow sign-in from any device (for shared/demo accounts, e.g. App Store review)"}
+                </button>
+              </form>
             </div>
 
             {teacher.username === "test" && (

@@ -32,6 +32,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     title: teacher.title,
     payType: teacher.payType,
     hasBoundDevice: teacher.boundDeviceId !== null,
+    deviceLockExempt: teacher.deviceLockExempt,
     pendingRequests: pendingRequests.map((r) => ({
       id: r.id,
       requestedStart: r.requestedStart.toISOString(),

@@ -30,8 +30,10 @@ export async function attemptLogin(
   // Admin isn't an employee tapping a door tag, so it can sign in from
   // anywhere. Teacher accounts are locked to whichever device they first
   // sign in from, so someone can't log out and log into a coworker's
-  // account on their own phone to tap for them.
-  if (user.role === "TEACHER") {
+  // account on their own phone to tap for them. deviceLockExempt opts a
+  // specific shared/demo account (e.g. for App Store review) out of that,
+  // since it needs to work on whatever device is on hand each time.
+  if (user.role === "TEACHER" && !user.deviceLockExempt) {
     let boundDeviceId = user.boundDeviceId;
 
     if (!boundDeviceId) {

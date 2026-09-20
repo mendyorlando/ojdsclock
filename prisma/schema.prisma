@@ -62,6 +62,10 @@ model User {
   title         String?
   payType       PayType  @default(HOURLY)
   boundDeviceId String?
+  // For shared/demo accounts (e.g. an App Store reviewer login) that need to
+  // sign in from whatever device is on hand each time, rather than getting
+  // locked to the first one - see attemptLogin() in src/lib/login.ts.
+  deviceLockExempt Boolean  @default(false)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   schoolId      String
