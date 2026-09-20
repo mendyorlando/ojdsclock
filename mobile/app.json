@@ -21,7 +21,10 @@
       "associatedDomains": [
         "applinks:ojdsclock.vercel.app"
       ],
-      "buildNumber": "6"
+      "buildNumber": "7",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "org.ojds.clock",

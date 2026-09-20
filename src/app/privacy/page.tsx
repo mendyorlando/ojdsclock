@@ -5,7 +5,7 @@ export default function PrivacyPage() {
     <main className="stage-light flex-1 px-6 py-16">
       <div className="mx-auto max-w-2xl">
         <h1 className="text-2xl font-extrabold text-ink tracking-tight mb-2">Privacy Policy</h1>
-        <p className="text-ink-soft text-sm mb-8">Last updated September 7, 2026</p>
+        <p className="text-ink-soft text-sm mb-8">Last updated September 18, 2026</p>
 
         <div className="space-y-6 text-ink text-sm leading-relaxed">
           <p>
@@ -37,6 +37,11 @@ export default function PrivacyPage() {
                 If you use the QR code backup to clock in or out (in place of tapping the entrance
                 tag), your phone&apos;s location at that moment is sent once to confirm you&apos;re
                 actually at the school, then discarded - it is not stored or tracked afterward.
+              </li>
+              <li>
+                If you&apos;re an administrator, your device registers for push notifications so we
+                can alert you to pending sign-in and hour-correction requests. This uses a
+                device-specific notification token, not your location.
               </li>
             </ul>
           </section>

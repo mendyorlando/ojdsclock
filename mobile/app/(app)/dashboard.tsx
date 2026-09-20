@@ -6,7 +6,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { enableGeofence, disableGeofence, isGeofenceEnabled } from "@/lib/geofence";
+import { hasSeenWelcomeGuide, markWelcomeGuideSeen } from "@/lib/onboarding";
 import { AdminOverview } from "@/components/AdminOverview";
+import { WelcomeGuide } from "@/components/WelcomeGuide";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- static image asset, same pattern used throughout this app
 const defaultLogo = require("@/assets/full-ojds-logo.png");
@@ -54,10 +56,24 @@ function TeacherDashboard() {
   const [error, setError] = useState(false);
   const [geofenceOn, setGeofenceOn] = useState(false);
   const [geofenceBusy, setGeofenceBusy] = useState(false);
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
 
   useEffect(() => {
     isGeofenceEnabled().then(setGeofenceOn);
   }, []);
+
+  useEffect(() => {
+    hasSeenWelcomeGuide().then((seen) => setShowWelcomeGuide(!seen));
+  }, []);
+
+  // The location prompt that follows immediately reuses the same
+  // "denied" messaging as the manual dashboard toggle - the explanation
+  // in WelcomeGuide covers the happy path, this covers if they still say no.
+  async function onFinishWelcomeGuide() {
+    setShowWelcomeGuide(false);
+    await markWelcomeGuideSeen();
+    await onToggleGeofence(true);
+  }
 
   async function onToggleGeofence(next: boolean) {
     setGeofenceBusy(true);
@@ -130,6 +146,8 @@ function TeacherDashboard() {
   }
 
   return (
+    <>
+    <WelcomeGuide visible={showWelcomeGuide} onDismiss={onFinishWelcomeGuide} />
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
@@ -227,6 +245,7 @@ function TeacherDashboard() {
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
     </ScrollView>
+    </>
   );
 }
 
